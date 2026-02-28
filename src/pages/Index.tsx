@@ -14,7 +14,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   if (!isLoggedIn) {
-    navigate("/login");
+    navigate("/login", { replace: true });
     return null;
   }
 
@@ -39,15 +39,13 @@ const Index = () => {
             <Bell className="w-4 h-4 text-primary-foreground" />
           </button>
         </div>
-        <div className="flex items-center gap-3 bg-primary-foreground/20 backdrop-blur-sm rounded-xl px-4 py-2.5">
+        <button
+          onClick={() => navigate("/search")}
+          className="flex items-center gap-3 bg-primary-foreground/20 backdrop-blur-sm rounded-xl px-4 py-2.5 w-full text-left"
+        >
           <Search className="w-4 h-4 text-primary-foreground/70" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search for services..."
-            className="flex-1 bg-transparent outline-none text-primary-foreground placeholder:text-primary-foreground/60 text-sm"
-          />
-        </div>
+          <span className="text-primary-foreground/60 text-sm">Search for services...</span>
+        </button>
       </div>
 
       <div className="px-4 space-y-6 mt-5">

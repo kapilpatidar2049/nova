@@ -8,15 +8,15 @@ const BottomNav = () => {
   const { cartCount } = useApp();
 
   const tabs = [
-    { icon: Home, label: "Home", path: "/" },
-    { icon: Search, label: "Search", path: "/?search=true" },
+    { icon: Home, label: "Home", path: "/home" },
+    { icon: Search, label: "Search", path: "/search" },
     { icon: ShoppingBag, label: "Cart", path: "/cart", badge: cartCount },
     { icon: ClipboardList, label: "Orders", path: "/orders" },
     { icon: User, label: "Profile", path: "/profile" },
   ];
 
   const isActive = (path: string) => {
-    if (path === "/") return location.pathname === "/";
+    if (path === "/home") return location.pathname === "/home";
     return location.pathname.startsWith(path);
   };
 
