@@ -4,8 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/contexts/AppContext";
+import Splash from "./pages/Splash";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import SearchPage from "./pages/SearchPage";
 import ServiceDetail from "./pages/ServiceDetail";
 import Cart from "./pages/Cart";
 import Booking from "./pages/Booking";
@@ -27,8 +29,10 @@ const App = () => (
         <BrowserRouter>
           <div className="max-w-lg mx-auto min-h-screen bg-background relative">
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<Splash />} />
+              <Route path="/home" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/search" element={<SearchPage />} />
               <Route path="/service/:id" element={<ServiceDetail />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/booking" element={<Booking />} />

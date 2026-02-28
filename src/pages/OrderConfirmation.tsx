@@ -57,7 +57,7 @@ const OrderConfirmation = () => {
         <button onClick={() => navigate("/orders")} className="mt-8 gradient-primary text-primary-foreground px-10 py-3.5 rounded-xl font-semibold shadow-salon">
           View My Orders
         </button>
-        <button onClick={() => navigate("/")} className="mt-3 text-primary font-medium text-sm block mx-auto">
+        <button onClick={() => navigate("/home")} className="mt-3 text-primary font-medium text-sm block mx-auto">
           Back to Home
         </button>
       </div>

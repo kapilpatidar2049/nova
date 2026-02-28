@@ -37,7 +37,7 @@ const Orders = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="px-4 pt-12 pb-4 flex items-center gap-3">
-        <button onClick={() => navigate("/")} className="w-9 h-9 rounded-full bg-card shadow-card flex items-center justify-center">
+        <button onClick={() => navigate("/home")} className="w-9 h-9 rounded-full bg-card shadow-card flex items-center justify-center">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
         <h1 className="text-xl font-display font-bold text-foreground">My Orders</h1>

@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
+import LiveTracking from "@/components/LiveTracking";
 
 const timeline = ["booked", "assigned", "on_the_way", "started", "completed"];
 const timelineLabels: Record<string, string> = {
@@ -65,6 +66,10 @@ const OrderDetail = () => {
               ))}
             </div>
           </div>
+        )}
+
+        {order.status === "on_the_way" && (
+          <LiveTracking beautician={order.beautician} />
         )}
 
         {order.status === "cancelled" && (

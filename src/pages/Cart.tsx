@@ -13,7 +13,7 @@ const Cart = () => {
         <ShoppingBag className="w-16 h-16 text-muted-foreground/30 mb-4" />
         <h2 className="text-lg font-display font-bold text-foreground">Your cart is empty</h2>
         <p className="text-sm text-muted-foreground mt-1">Add services to get started</p>
-        <button onClick={() => navigate("/")} className="mt-6 gradient-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-salon">
+        <button onClick={() => navigate("/home")} className="mt-6 gradient-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-salon">
           Browse Services
         </button>
         <BottomNav />

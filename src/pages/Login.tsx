@@ -18,7 +18,7 @@ const Login = () => {
   const handleVerify = () => {
     if (otp.length >= 4) {
       login(phone, name || undefined);
-      navigate("/");
+      navigate("/home");
     }
   };
 
