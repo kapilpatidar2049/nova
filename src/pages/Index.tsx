@@ -19,7 +19,10 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      navigate("/login", { replace: true });
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -33,10 +36,9 @@ const Index = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, navigate]);
 
   if (!isLoggedIn) {
-    navigate("/login", { replace: true });
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground text-sm">Redirecting to login...</p>
