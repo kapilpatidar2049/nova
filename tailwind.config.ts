@@ -98,6 +98,9 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "slide-up": "slide-up 0.3s ease-out",
       },
+      transitionDuration: {
+        "5000": "5000ms",
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

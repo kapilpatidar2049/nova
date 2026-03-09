@@ -1,14 +1,37 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Star, Clock, Heart, ShoppingBag, Check } from "lucide-react";
-import { services, beauticians } from "@/data/mockData";
+import type { Service } from "@/types";
 import { useApp } from "@/contexts/AppContext";
+import { customerApi, mapApiServiceToUi } from "@/lib/api";
+import serviceHair from "@/assets/service-hair.png";
 
 const ServiceDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart, toggleWishlist, wishlist } = useApp();
-  const service = services.find((s) => s.id === id);
+  const [service, setService] = useState<Service | null>(location.state?.service ?? null);
+  const [loading, setLoading] = useState(!location.state?.service);
 
+  useEffect(() => {
+    if (service || !id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await customerApi.getServices(1, 100, "");
+        if (!cancelled && res.success && res.data?.items) {
+          const list = res.data.items.map((s) => mapApiServiceToUi(s, serviceHair));
+          setService(list.find((s) => s.id === id) ?? null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id, service]);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-foreground">Loading...</div>;
   if (!service) return <div className="min-h-screen flex items-center justify-center text-foreground">Service not found</div>;
 
   const isWishlisted = wishlist.includes(service.id);
@@ -75,45 +98,12 @@ const ServiceDetail = () => {
           </div>
         </div>
 
-        {/* Beauticians */}
+        {/* Expert assignment */}
         <div className="mt-4 bg-card rounded-2xl p-5 shadow-card">
           <h2 className="font-display font-bold text-foreground mb-3">Our Experts</h2>
-          <div className="space-y-3">
-            {beauticians.slice(0, 2).map((b) => (
-              <div key={b.id} className="flex items-center gap-3 p-3 bg-secondary rounded-xl">
-                <img src={b.image} alt={b.name} className="w-12 h-12 rounded-full object-cover" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-foreground">{b.name}</h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Star className="w-3 h-3 fill-salon-gold text-salon-gold" />
-                    <span className="text-xs">{b.rating}</span>
-                    <span className="text-xs text-muted-foreground">• {b.experience}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Reviews preview */}
-        <div className="mt-4 bg-card rounded-2xl p-5 shadow-card">
-          <h2 className="font-display font-bold text-foreground mb-3">Reviews</h2>
-          {[
-            { name: "Anjali K.", rating: 5, text: "Amazing service! The beautician was very professional and friendly." },
-            { name: "Sneha R.", rating: 4, text: "Great experience, loved the products used. Will book again." },
-          ].map((r, i) => (
-            <div key={i} className={`${i > 0 ? "mt-3 pt-3 border-t border-border" : ""}`}>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">{r.name}</span>
-                <div className="flex">
-                  {Array.from({ length: r.rating }).map((_, j) => (
-                    <Star key={j} className="w-3 h-3 fill-salon-gold text-salon-gold" />
-                  ))}
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">{r.text}</p>
-            </div>
-          ))}
+          <p className="text-sm text-muted-foreground">
+            A skilled beautician will be assigned for your booking based on availability.
+          </p>
         </div>
       </div>
 

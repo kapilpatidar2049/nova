@@ -1,9 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, SlidersHorizontal, X } from "lucide-react";
-import { services, categories } from "@/data/mockData";
+import { categories } from "@/data/constants";
+import type { Service } from "@/types";
 import ServiceCard from "@/components/ServiceCard";
 import BottomNav from "@/components/BottomNav";
+import { useApp } from "@/contexts/AppContext";
+import { customerApi, mapApiServiceToUi } from "@/lib/api";
+import serviceHair from "@/assets/service-hair.png";
 
 const priceRanges = [
   { label: "Under ₹500", min: 0, max: 500 },
@@ -21,11 +25,33 @@ const sortOptions = [
 
 const SearchPage = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useApp();
   const [query, setQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState("rating");
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate("/login", { replace: true });
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await customerApi.getServices(1, 100, "");
+        if (!cancelled && res.success && res.data?.items) {
+          setServices(res.data.items.map((s) => mapApiServiceToUi(s, serviceHair)));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isLoggedIn, navigate]);
 
   const toggleCat = (id: string) =>
     setSelectedCats((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);
@@ -141,18 +167,24 @@ const SearchPage = () => {
 
       {/* Results */}
       <div className="px-4">
-        <p className="text-xs text-muted-foreground mb-3">{results.length} services found</p>
-        <div className="space-y-3">
-          {results.map((s) => (
-            <ServiceCard key={s.id} service={s} variant="list" />
-          ))}
-          {results.length === 0 && (
-            <div className="text-center py-16">
-              <Search className="w-12 h-12 text-muted mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm">No services found</p>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground mb-3">{results.length} services found</p>
+            <div className="space-y-3">
+              {results.map((s) => (
+                <ServiceCard key={s.id} service={s} variant="list" />
+              ))}
+              {results.length === 0 && (
+                <div className="text-center py-16">
+                  <Search className="w-12 h-12 text-muted mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">No services found</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       <BottomNav />

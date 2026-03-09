@@ -22,7 +22,7 @@ const Splash = () => {
         <Sparkles className="w-10 h-10 text-primary-foreground" />
       </div>
       <h1 className="text-3xl font-display font-bold text-primary-foreground tracking-tight">
-        GlamBook
+        Nova 
       </h1>
       <p className="text-primary-foreground/70 text-sm">Beauty at your doorstep</p>
       <div className="mt-8 flex gap-1.5">

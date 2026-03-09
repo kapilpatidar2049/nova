@@ -15,9 +15,10 @@ const timelineLabels: Record<string, string> = {
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { orders, cancelOrder } = useApp();
+  const { orders, cancelOrder, ordersLoading } = useApp();
   const order = orders.find((o) => o.id === id);
 
+  if (ordersLoading && !order) return <div className="min-h-screen flex items-center justify-center text-foreground">Loading...</div>;
   if (!order) return <div className="min-h-screen flex items-center justify-center text-foreground">Order not found</div>;
 
   const currentIdx = timeline.indexOf(order.status);
@@ -68,8 +69,8 @@ const OrderDetail = () => {
           </div>
         )}
 
-        {order.status === "on_the_way" && (
-          <LiveTracking beautician={order.beautician} />
+        {(order.status === "on_the_way" || order.status === "assigned" || order.status === "started") && (
+          <LiveTracking beautician={order.beautician} appointmentId={order.id} />
         )}
 
         {order.status === "cancelled" && (
@@ -119,7 +120,7 @@ const OrderDetail = () => {
         {/* Cancel */}
         {!["completed", "cancelled"].includes(order.status) && (
           <button
-            onClick={() => { cancelOrder(order.id); navigate("/orders"); }}
+            onClick={async () => { await cancelOrder(order.id); navigate("/orders"); }}
             className="w-full border-2 border-destructive text-destructive py-3 rounded-xl font-semibold"
           >
             Cancel Order

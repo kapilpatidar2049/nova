@@ -56,7 +56,7 @@ const Profile = () => {
         <div className="mt-8 text-center">
           <div className="flex items-center justify-center gap-1 text-muted-foreground">
             <Sparkles className="w-4 h-4" />
-            <span className="text-xs">GlamBook v1.0</span>
+            <span className="text-xs">Nova  v1.0</span>
           </div>
         </div>
       </div>

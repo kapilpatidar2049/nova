@@ -2,32 +2,27 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, CreditCard, Banknote, Wallet, Check } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
-import { beauticians } from "@/data/mockData";
-
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { cart, cartTotal, walletBalance, createOrder } = useApp();
   const [paymentMode, setPaymentMode] = useState("online");
-  const bookingInfo = (location.state as any) || {};
+  const bookingInfo = (location.state as { address?: string; date?: string; time?: string }) || {};
 
-  const handlePay = () => {
-    const selectedBeautician = bookingInfo.beautician !== "auto"
-      ? beauticians.find((b) => b.id === bookingInfo.beautician)
-      : beauticians[0];
-
-    const orderId = createOrder({
+  const [paying, setPaying] = useState(false);
+  const handlePay = async () => {
+    setPaying(true);
+    const orderId = await createOrder({
       services: cart,
       date: bookingInfo.date || new Date().toISOString().split("T")[0],
       timeSlot: bookingInfo.time || "10:00 AM",
-      address: bookingInfo.address || "123 Park Street, Mumbai",
+      address: bookingInfo.address || "",
       paymentMode,
       status: "booked",
-      beautician: selectedBeautician,
       total: cartTotal,
     });
-
-    navigate("/order-confirmation", { state: { orderId } });
+    setPaying(false);
+    if (orderId) navigate("/order-confirmation", { state: { orderId } });
   };
 
   const modes = [
@@ -90,8 +85,8 @@ const Payment = () => {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
-        <button onClick={handlePay} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon">
-          Pay ₹{cartTotal}
+        <button onClick={handlePay} disabled={paying} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50">
+          {paying ? "Booking..." : `Pay ₹${cartTotal}`}
         </button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { Star, Heart, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Service } from "@/data/mockData";
+import type { Service } from "@/types";
 import { useApp } from "@/contexts/AppContext";
 
 const ServiceCard = ({ service, variant = "grid" }: { service: Service; variant?: "grid" | "list" }) => {

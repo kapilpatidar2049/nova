@@ -2,16 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Plus, CalendarDays, Clock, User, Check } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
-import { timeSlots, beauticians } from "@/data/mockData";
+import { timeSlots } from "@/data/constants";
 
 const Booking = () => {
   const navigate = useNavigate();
   const { cart, cartTotal } = useApp();
   const [step, setStep] = useState(1);
-  const [address, setAddress] = useState("123 Park Street, Apartment 4B, Mumbai - 400001");
+  const [address, setAddress] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [beauticianPref, setBeauticianPref] = useState<string>("auto");
 
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -27,7 +26,7 @@ const Booking = () => {
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
-    else navigate("/payment", { state: { address, date: selectedDate, time: selectedTime, beautician: beauticianPref } });
+    else navigate("/payment", { state: { address, date: selectedDate, time: selectedTime } });
   };
 
   return (
@@ -63,19 +62,19 @@ const Booking = () => {
       <div className="px-4">
         {step === 1 && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-display font-bold text-foreground">Select Address</h2>
-            <div className="bg-card rounded-xl p-4 shadow-card border-2 border-primary">
+            <h2 className="font-display font-bold text-foreground">Service Address</h2>
+            <div className="bg-card rounded-xl p-4 shadow-card border-2 border-border">
               <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <span className="text-xs font-semibold text-primary">Home</span>
-                  <p className="text-sm text-foreground mt-1">{address}</p>
-                </div>
+                <MapPin className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter full address for service"
+                  className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
+                />
               </div>
             </div>
-            <button className="w-full border-2 border-dashed border-border rounded-xl p-4 flex items-center justify-center gap-2 text-muted-foreground">
-              <Plus className="w-4 h-4" /> Add New Address
-            </button>
           </div>
         )}
 
@@ -119,27 +118,11 @@ const Booking = () => {
 
         {step === 3 && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-display font-bold text-foreground flex items-center gap-2"><User className="w-5 h-5 text-primary" /> Select Expert</h2>
-            <button
-              onClick={() => setBeauticianPref("auto")}
-              className={`w-full p-4 rounded-xl border-2 text-left transition-all ${beauticianPref === "auto" ? "border-primary bg-accent" : "border-border bg-card"}`}
-            >
+            <h2 className="font-display font-bold text-foreground flex items-center gap-2"><User className="w-5 h-5 text-primary" /> Expert</h2>
+            <div className="p-4 rounded-xl border-2 border-primary bg-accent">
               <span className="text-sm font-semibold text-foreground">Auto Assign</span>
-              <p className="text-xs text-muted-foreground mt-0.5">We'll assign the best available expert</p>
-            </button>
-            {beauticians.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => setBeauticianPref(b.id)}
-                className={`w-full p-4 rounded-xl border-2 flex items-center gap-3 text-left transition-all ${beauticianPref === b.id ? "border-primary bg-accent" : "border-border bg-card"}`}
-              >
-                <img src={b.image} alt={b.name} className="w-12 h-12 rounded-full object-cover" />
-                <div>
-                  <span className="text-sm font-semibold text-foreground">{b.name}</span>
-                  <p className="text-xs text-muted-foreground">{b.experience} • {b.servicesCompleted} services</p>
-                </div>
-              </button>
-            ))}
+              <p className="text-xs text-muted-foreground mt-0.5">We'll assign the best available expert for your booking.</p>
+            </div>
           </div>
         )}
       </div>
