@@ -36,10 +36,10 @@ firebase.messaging().onBackgroundMessage(function(payload) {
 }
 
 // https://vitejs.dev/config/
-// Use "./" so built app works when opening index.html via file:// (double-click).
-// For deploy on a subpath, set VITE_BASE_URL e.g. /2026/beautician/customer/
+// In development and on hosts like Vercel, serve from root ("/").
+// For deploy on a subpath (e.g. /2026/beautician/customer/), set VITE_BASE_URL accordingly.
 export default defineConfig(({ mode }) => ({
-  base: process.env.VITE_BASE_URL || "./",
+  base: mode === "development" ? "/" : process.env.VITE_BASE_URL || "/",
   server: {
     host: "::",
     port: 8080,
