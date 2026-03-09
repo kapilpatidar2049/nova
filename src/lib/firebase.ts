@@ -21,6 +21,11 @@ export function getFirebaseApp() {
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
+function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+}
+
 async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) return null;
   try {
@@ -34,6 +39,9 @@ async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration
 }
 
 export async function getFCMToken(): Promise<string | null> {
+  // Skip FCM on iOS browsers where web push is not supported
+  if (isIOS()) return null;
+
   const supported = await isSupported();
   if (!supported) return null;
   const firebaseApp = getFirebaseApp();
