@@ -63,6 +63,16 @@ export function isFirebaseConfigured(): boolean {
 export function onFCMMessage(
   callback: (payload: { data?: Record<string, string>; notification?: { title?: string; body?: string } }) => void
 ): () => void {
+  // Fast feature check to avoid calling Firebase messaging on unsupported browsers
+  if (
+    typeof window === "undefined" ||
+    typeof navigator === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    !(window as any).PushManager
+  ) {
+    return () => {};
+  }
+
   const app = getFirebaseApp();
   if (!app) return () => {};
   try {
