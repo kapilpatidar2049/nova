@@ -6,80 +6,78 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 340 20% 15%;
+    /* Nova Beauty – shared navy & gold theme */
+    --background: 226 45% 16%;          /* #151F3A */
+    --foreground: 44 63% 94%;           /* #F9F5E9 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 340 20% 15%;
+    --card: 225 38% 20%;                /* #1E2946 */
+    --card-foreground: 44 63% 94%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 340 20% 15%;
+    --popover: 225 38% 20%;
+    --popover-foreground: 44 63% 94%;
 
-    --primary: 340 82% 52%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 43 59% 61%;              /* #D9B45A */
+    --primary-foreground: 226 45% 16%;  /* navy on gold */
 
-    --secondary: 340 30% 95%;
-    --secondary-foreground: 340 20% 25%;
+    --secondary: 225 33% 25%;           /* #243157 */
+    --secondary-foreground: 44 63% 94%;
 
-    --muted: 340 15% 94%;
-    --muted-foreground: 340 10% 50%;
+    --muted: 225 38% 20%;
+    --muted-foreground: 225 29% 73%;    /* #A3AEC9 */
 
-    --accent: 340 60% 92%;
-    --accent-foreground: 340 82% 42%;
+    --accent: 176 49% 48%;              /* #3BB7B4 */
+    --accent-foreground: 207 69% 6%;    /* #051018 */
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 340 15% 90%;
-    --input: 340 15% 90%;
-    --ring: 340 82% 52%;
+    --border: 224 39% 26%;              /* #2B365B */
+    --input: 224 39% 26%;
+    --ring: 43 59% 61%;
 
     --radius: 0.75rem;
 
-    --salon-gold: 38 80% 55%;
-    --salon-gold-foreground: 38 80% 20%;
-    --salon-rose: 350 70% 65%;
-    --salon-blush: 340 40% 96%;
-    --salon-dark: 340 25% 12%;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 340 82% 52%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 340 60% 92%;
-    --sidebar-accent-foreground: 340 82% 42%;
-    --sidebar-border: 340 15% 90%;
-    --sidebar-ring: 340 82% 52%;
+    /* Sidebar (used lightly in mobile app, keep in sync) */
+    --sidebar-background: 226 45% 16%;
+    --sidebar-foreground: 44 63% 94%;
+    --sidebar-primary: 43 59% 61%;
+    --sidebar-primary-foreground: 226 45% 16%;
+    --sidebar-accent: 225 33% 25%;
+    --sidebar-accent-foreground: 44 63% 94%;
+    --sidebar-border: 224 39% 26%;
+    --sidebar-ring: 43 59% 61%;
   }
 
   .dark {
-    --background: 340 25% 6%;
-    --foreground: 340 10% 95%;
-    --card: 340 20% 10%;
-    --card-foreground: 340 10% 95%;
-    --popover: 340 20% 10%;
-    --popover-foreground: 340 10% 95%;
-    --primary: 340 82% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 340 20% 15%;
-    --secondary-foreground: 340 10% 90%;
-    --muted: 340 15% 15%;
-    --muted-foreground: 340 10% 60%;
-    --accent: 340 30% 18%;
-    --accent-foreground: 340 60% 70%;
-    --destructive: 0 62% 30%;
+    /* Slightly lighter navy for dark mode */
+    --background: 226 45% 12%;
+    --foreground: 44 63% 94%;
+    --card: 225 38% 18%;
+    --card-foreground: 44 63% 94%;
+    --popover: 225 38% 18%;
+    --popover-foreground: 44 63% 94%;
+    --primary: 43 59% 65%;
+    --primary-foreground: 226 45% 12%;
+    --secondary: 225 33% 24%;
+    --secondary-foreground: 44 63% 94%;
+    --muted: 225 33% 22%;
+    --muted-foreground: 225 29% 73%;
+    --accent: 176 49% 52%;
+    --accent-foreground: 207 69% 6%;
+    --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 340 15% 18%;
-    --input: 340 15% 18%;
-    --ring: 340 82% 55%;
-    --sidebar-background: 340 25% 8%;
-    --sidebar-foreground: 340 10% 90%;
-    --sidebar-primary: 340 82% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 340 20% 15%;
-    --sidebar-accent-foreground: 340 60% 70%;
-    --sidebar-border: 340 15% 18%;
-    --sidebar-ring: 340 82% 55%;
+    --border: 225 33% 22%;
+    --input: 225 33% 22%;
+    --ring: 43 59% 65%;
+
+    --sidebar-background: 226 45% 10%;
+    --sidebar-foreground: 44 63% 94%;
+    --sidebar-primary: 43 59% 65%;
+    --sidebar-primary-foreground: 226 45% 10%;
+    --sidebar-accent: 225 33% 24%;
+    --sidebar-accent-foreground: 44 63% 94%;
+    --sidebar-border: 225 33% 24%;
+    --sidebar-ring: 43 59% 65%;
   }
 }
 
@@ -98,15 +96,15 @@
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(340, 82%, 52%), hsl(350, 70%, 65%));
+    background: linear-gradient(135deg, hsl(43 59% 61%), hsl(42 59% 54%));
   }
   .gradient-gold {
-    background: linear-gradient(135deg, hsl(38, 80%, 55%), hsl(28, 90%, 60%));
+    background: linear-gradient(135deg, hsl(43 59% 61%), hsl(42 59% 54%));
   }
   .shadow-salon {
-    box-shadow: 0 4px 20px -4px hsl(340 82% 52% / 0.15);
+    box-shadow: 0 4px 20px -4px hsl(226 45% 8% / 0.45);
   }
   .shadow-card {
-    box-shadow: 0 2px 12px -2px hsl(340 20% 15% / 0.08);
+    box-shadow: 0 2px 12px -2px hsl(226 45% 8% / 0.35);
   }
 }
