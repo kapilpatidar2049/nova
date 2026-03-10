@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, Bell, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import ServiceCard from "@/components/ServiceCard";
-import { categories } from "@/data/constants";
 import type { Service } from "@/types";
 import { useApp } from "@/contexts/AppContext";
 import heroBanner from "@/assets/hero-banner.png";
@@ -45,6 +44,17 @@ const Index = () => {
       </div>
     );
   }
+
+  const categories = useMemo(() => {
+    const unique = new Map<string, { id: string; name: string }>();
+    services.forEach((s) => {
+      const id = s.category || "other";
+      if (!unique.has(id)) {
+        unique.set(id, { id, name: id.charAt(0).toUpperCase() + id.slice(1) });
+      }
+    });
+    return Array.from(unique.values());
+  }, [services]);
 
   const filtered = services.filter((s) => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase());

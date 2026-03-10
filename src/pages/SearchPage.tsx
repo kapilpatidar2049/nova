@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, SlidersHorizontal, X } from "lucide-react";
-import { categories } from "@/data/constants";
 import type { Service } from "@/types";
 import ServiceCard from "@/components/ServiceCard";
 import BottomNav from "@/components/BottomNav";
@@ -52,6 +51,17 @@ const SearchPage = () => {
     })();
     return () => { cancelled = true; };
   }, [isLoggedIn, navigate]);
+
+  const categories = useMemo(() => {
+    const unique = new Map<string, string>();
+    services.forEach((s) => {
+      const id = s.category || "other";
+      if (!unique.has(id)) {
+        unique.set(id, id.charAt(0).toUpperCase() + id.slice(1));
+      }
+    });
+    return Array.from(unique.entries()).map(([id, name]) => ({ id, name }));
+  }, [services]);
 
   const toggleCat = (id: string) =>
     setSelectedCats((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);

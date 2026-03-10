@@ -118,7 +118,18 @@ export const authApi = {
 // Customer
 export const customerApi = {
   getServices: (page = 1, limit = 50, search = "") =>
-    request<{ items: Array<{ _id: string; name: string; description?: string; basePrice: number; durationMinutes: number }>; meta: unknown }>(
+    request<{
+      items: Array<{
+        _id: string;
+        name: string;
+        category?: string;
+        description?: string;
+        imageUrl?: string;
+        basePrice: number;
+        durationMinutes: number;
+      }>;
+      meta: unknown;
+    }>(
       "/customer/services",
       { params: { page: String(page), limit: String(limit), ...(search.trim() ? { search: search.trim() } : {}) } }
     ),
@@ -167,18 +178,27 @@ export const customerApi = {
 };
 
 export function mapApiServiceToUi(
-  item: { _id: string; name: string; description?: string; basePrice: number; durationMinutes: number },
-  defaultImage: string
+  item: {
+    _id: string;
+    name: string;
+    category?: string;
+    description?: string;
+    imageUrl?: string;
+    basePrice: number;
+    durationMinutes: number;
+  },
+  defaultImage: string,
 ): import("@/types").Service {
+  const category = (item.category || "Other").toLowerCase();
   return {
     id: item._id,
     name: item.name,
-    category: "service",
+    category,
     price: item.basePrice,
     rating: 4.5,
     reviews: 0,
     duration: `${item.durationMinutes} min`,
-    image: defaultImage,
+    image: item.imageUrl || defaultImage,
     description: item.description || "",
     includes: [],
   };
