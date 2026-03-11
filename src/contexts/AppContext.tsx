@@ -64,11 +64,11 @@ function mapApiAppointmentToOrder(item: {
   _id: string;
   service: { _id: string; name: string; basePrice: number; durationMinutes: number };
   beautician?: { _id: string; name: string };
-  scheduledAt: string;
+  scheduledAt?: string | null;
   address: string;
   status: string;
   price: number;
-  createdAt: string;
+  createdAt?: string;
 }): BookingOrder {
   const statusMap: Record<string, BookingOrder["status"]> = {
     pending: "booked",
@@ -78,10 +78,17 @@ function mapApiAppointmentToOrder(item: {
     cancelled: "cancelled",
   };
   const status = statusMap[item.status] || "booked";
-  const d = item.scheduledAt ? new Date(item.scheduledAt) : new Date();
-  const valid = !Number.isNaN(d.getTime());
-  const timeSlot = valid ? d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : "10:00 AM";
-  const dateStr = valid ? d.toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+  let timeSlot = "10:00 AM";
+  let dateStr = new Date().toISOString().split("T")[0];
+  try {
+    const d = item.scheduledAt ? new Date(item.scheduledAt) : new Date();
+    if (!Number.isNaN(d.getTime())) {
+      timeSlot = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+      dateStr = d.toISOString().split("T")[0];
+    }
+  } catch {
+    // keep defaults on any date error
+  }
   return {
     id: item._id,
     services: [
@@ -297,10 +304,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const cartCount = state.cart.reduce((t, i) => t + i.quantity, 0);
 
   const createOrder = async (order: Omit<BookingOrder, "id" | "createdAt">): Promise<string | null> => {
-    const dateStr = order.date || new Date().toISOString().split("T")[0];
-    const timeStr = timeSlotToISOTime(order.timeSlot || "10:00 AM");
-    const d = new Date(`${dateStr}T${timeStr}`);
-    const scheduledAt = Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    let scheduledAt: string;
+    try {
+      const dateStr = order.date || new Date().toISOString().split("T")[0];
+      const timeStr = timeSlotToISOTime(order.timeSlot || "10:00 AM");
+      const d = new Date(`${dateStr}T${timeStr}`);
+      scheduledAt = Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    } catch {
+      scheduledAt = new Date().toISOString();
+    }
     const total = order.total;
     const firstService = order.services[0]?.service;
     if (!firstService) return null;

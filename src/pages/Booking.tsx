@@ -13,9 +13,26 @@ const Booking = () => {
   const [selectedTime, setSelectedTime] = useState("");
 
   const dates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i + 1);
-    return { date: d.toISOString().split("T")[0], day: d.toLocaleDateString("en", { weekday: "short" }), num: d.getDate() };
+    try {
+      const d = new Date();
+      d.setDate(d.getDate() + i + 1);
+      if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
+      return {
+        date: d.toISOString().split("T")[0],
+        day: d.toLocaleDateString("en", { weekday: "short" }),
+        num: d.getDate(),
+      };
+    } catch {
+      const t = Date.now() + (i + 1) * 86400000;
+      const y = new Date(t).getUTCFullYear();
+      const m = new Date(t).getUTCMonth() + 1;
+      const dayNum = new Date(t).getUTCDate();
+      return {
+        date: `${y}-${String(m).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`,
+        day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(t).getUTCDay()] ?? "—",
+        num: dayNum,
+      };
+    }
   });
 
   const canProceed = () => {
