@@ -48,6 +48,18 @@ interface AppContextType extends AppState {
   refreshProfile: () => Promise<void>;
 }
 
+/** Convert "10:00 AM" / "02:30 PM" to 24h "HH:MM:00" for ISO datetime. */
+function timeSlotToISOTime(timeSlot: string): string {
+  const match = timeSlot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return "10:00:00";
+  let [, h, m, period] = match;
+  let hour = parseInt(h!, 10);
+  const min = m!;
+  if (period?.toUpperCase() === "PM" && hour !== 12) hour += 12;
+  if (period?.toUpperCase() === "AM" && hour === 12) hour = 0;
+  return `${String(hour).padStart(2, "0")}:${min}:00`;
+}
+
 function mapApiAppointmentToOrder(item: {
   _id: string;
   service: { _id: string; name: string; basePrice: number; durationMinutes: number };
@@ -66,8 +78,10 @@ function mapApiAppointmentToOrder(item: {
     cancelled: "cancelled",
   };
   const status = statusMap[item.status] || "booked";
-  const d = new Date(item.scheduledAt);
-  const timeSlot = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const d = item.scheduledAt ? new Date(item.scheduledAt) : new Date();
+  const valid = !Number.isNaN(d.getTime());
+  const timeSlot = valid ? d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : "10:00 AM";
+  const dateStr = valid ? d.toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
   return {
     id: item._id,
     services: [
@@ -87,7 +101,7 @@ function mapApiAppointmentToOrder(item: {
         quantity: 1,
       },
     ],
-    date: d.toISOString().split("T")[0],
+    date: dateStr,
     timeSlot,
     address: item.address,
     paymentMode: "Online",
@@ -228,9 +242,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       if (res.success && res.data?.user && res.data?.tokens) {
         const { user, tokens } = res.data;
-        if (user.role !== "customer") {
-          return { ok: false, error: "Use the customer app to sign in with OTP." };
-        }
         setAuthTokens(tokens.accessToken, tokens.refreshToken);
         setUser({ id: user.id, name: user.name, email: user.email, phone: user.phone });
         setState((s) => ({
@@ -286,7 +297,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const cartCount = state.cart.reduce((t, i) => t + i.quantity, 0);
 
   const createOrder = async (order: Omit<BookingOrder, "id" | "createdAt">): Promise<string | null> => {
-    const scheduledAt = new Date(`${order.date}T${order.timeSlot.replace(/\s/g, "")}`).toISOString();
+    const dateStr = order.date || new Date().toISOString().split("T")[0];
+    const timeStr = timeSlotToISOTime(order.timeSlot || "10:00 AM");
+    const d = new Date(`${dateStr}T${timeStr}`);
+    const scheduledAt = Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
     const total = order.total;
     const firstService = order.services[0]?.service;
     if (!firstService) return null;

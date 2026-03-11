@@ -105,7 +105,9 @@ export const authApi = {
     request<{
       user: { id: string; name: string; email: string; role: string; phone?: string };
       tokens: { accessToken: string; refreshToken: string };
-    }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ phone, otp }) }),
+      needsSignup?: boolean;
+      phone?: string;
+    }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ phone, otp, role: "customer" }) }),
   register: (body: { name: string; email: string; password: string; phone?: string; cityId?: string }) =>
     request<{ user: { id: string; name: string; email: string; role: string }; tokens: { accessToken: string; refreshToken: string } }>(
       "/auth/register",
