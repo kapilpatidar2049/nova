@@ -1,17 +1,19 @@
-import { useState, useEffect, useMemo } from "react";
-import { Search, Bell, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Bell, Sparkles, ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import ServiceCard from "@/components/ServiceCard";
 import type { Service } from "@/types";
 import { useApp } from "@/contexts/AppContext";
 import heroBanner from "@/assets/hero-banner.png";
-import { customerApi, mapApiServiceToUi } from "@/lib/api";
+import { customerApi, mapApiServiceToUi, type ApiBanner, type ApiCategory } from "@/lib/api";
 import serviceHair from "@/assets/service-hair.png";
 
 const Index = () => {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [banners, setBanners] = useState<ApiBanner[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const { isLoggedIn } = useApp();
@@ -26,9 +28,19 @@ const Index = () => {
     (async () => {
       setLoading(true);
       try {
-        const res = await customerApi.getServices(1, 50, "");
-        if (!cancelled && res.success && res.data?.items) {
-          setServices(res.data.items.map((s) => mapApiServiceToUi(s, serviceHair)));
+        const [bannersRes, categoriesRes, servicesRes] = await Promise.all([
+          customerApi.getBanners(),
+          customerApi.getCategories(),
+          customerApi.getServices(1, 50, ""),
+        ]);
+        if (!cancelled && bannersRes.success && bannersRes.data?.items) {
+          setBanners(bannersRes.data.items);
+        }
+        if (!cancelled && categoriesRes.success && categoriesRes.data?.items) {
+          setCategories(categoriesRes.data.items);
+        }
+        if (!cancelled && servicesRes.success && servicesRes.data?.items) {
+          setServices(servicesRes.data.items.map((s) => mapApiServiceToUi(s, serviceHair)));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -45,20 +57,13 @@ const Index = () => {
     );
   }
 
-  const categories = useMemo(() => {
-    const unique = new Map<string, { id: string; name: string }>();
-    services.forEach((s) => {
-      const id = s.category || "other";
-      if (!unique.has(id)) {
-        unique.set(id, { id, name: id.charAt(0).toUpperCase() + id.slice(1) });
-      }
-    });
-    return Array.from(unique.values());
-  }, [services]);
+  const activeCategoryName = activeCategoryId
+    ? categories.find((c) => c._id === activeCategoryId)?.name?.toLowerCase()
+    : null;
 
   const filtered = services.filter((s) => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = !activeCategory || s.category === activeCategory;
+    const matchCat = !activeCategoryName || s.category === activeCategoryName;
     return matchSearch && matchCat;
   });
 
@@ -87,32 +92,61 @@ const Index = () => {
       </div>
 
       <div className="px-4 space-y-6 mt-5">
-        {/* Promo Banner */}
-        <div className="relative rounded-2xl overflow-hidden shadow-salon">
-          <img src={heroBanner} alt="Special offers" className="w-full h-36 object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 to-transparent flex flex-col justify-center p-5">
-            <span className="text-primary-foreground text-xs font-semibold tracking-wider uppercase">Special Offer</span>
-            <h2 className="text-primary-foreground text-xl font-display font-bold mt-1">40% Off</h2>
-            <p className="text-primary-foreground/80 text-xs mt-1">On first booking</p>
+        {/* Dynamic Banners */}
+        {banners.length > 0 ? (
+          <div className="space-y-3">
+            {banners.map((banner) => (
+              <div key={banner._id} className="relative rounded-2xl overflow-hidden shadow-salon">
+                <img
+                  src={banner.imageUrl}
+                  alt={banner.title}
+                  className="w-full h-36 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 to-transparent flex flex-col justify-center p-5">
+                  <span className="text-primary-foreground text-xs font-semibold tracking-wider uppercase">
+                    {banner.title}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="relative rounded-2xl overflow-hidden shadow-salon">
+            <img src={heroBanner} alt="Special offers" className="w-full h-36 object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 to-transparent flex flex-col justify-center p-5">
+              <span className="text-primary-foreground text-xs font-semibold tracking-wider uppercase">Special Offer</span>
+              <h2 className="text-primary-foreground text-xl font-display font-bold mt-1">40% Off</h2>
+              <p className="text-primary-foreground/80 text-xs mt-1">On first booking</p>
+            </div>
+          </div>
+        )}
 
-        {/* Categories */}
+        {/* Categories from admin */}
         <div>
           <h2 className="text-lg font-display font-bold text-foreground mb-3">Categories</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {categories.map((cat) => (
               <button
-                key={cat.id}
-                onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+                key={cat._id}
+                onClick={() => setActiveCategoryId(activeCategoryId === cat._id ? null : cat._id)}
                 className={`flex flex-col items-center gap-1.5 min-w-[4.5rem] p-3 rounded-xl transition-all ${
-                  activeCategory === cat.id
+                  activeCategoryId === cat._id
                     ? "gradient-primary shadow-salon"
                     : "bg-card shadow-card"
                 }`}
               >
-                <span className="text-2xl">{cat.icon}</span>
-                <span className={`text-xs font-medium ${activeCategory === cat.id ? "text-primary-foreground" : "text-foreground"}`}>
+                {cat.imageUrl ? (
+                  <img
+                    src={cat.imageUrl}
+                    alt={cat.name}
+                    className="h-10 w-10 rounded-full object-cover border-2 border-background"
+                  />
+                ) : (
+                  <span className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                  </span>
+                )}
+                <span className={`text-xs font-medium ${activeCategoryId === cat._id ? "text-primary-foreground" : "text-foreground"}`}>
                   {cat.name}
                 </span>
               </button>
@@ -121,7 +155,7 @@ const Index = () => {
         </div>
 
         {/* Top Rated */}
-        {!search && !activeCategory && !loading && topRated.length > 0 && (
+        {!search && !activeCategoryId && !loading && topRated.length > 0 && (
           <div>
             <h2 className="text-lg font-display font-bold text-foreground mb-3">Top Rated</h2>
             <div className="grid grid-cols-2 gap-3">
@@ -135,7 +169,7 @@ const Index = () => {
         {/* All / Filtered */}
         <div>
           <h2 className="text-lg font-display font-bold text-foreground mb-3">
-            {activeCategory ? categories.find((c) => c.id === activeCategory)?.name : "All Services"}
+            {activeCategoryId ? categories.find((c) => c._id === activeCategoryId)?.name : "All Services"}
           </h2>
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading services...</p>

@@ -117,14 +117,34 @@ export const authApi = {
     request<{ name: string; email: string; phone?: string }>("/auth/profile"),
 };
 
+// Banners & Categories (for home screen)
+export interface ApiBanner {
+  _id: string;
+  title: string;
+  imageUrl: string;
+  link?: string;
+  order?: number;
+}
+
+export interface ApiCategory {
+  _id: string;
+  name: string;
+  imageUrl?: string;
+  order?: number;
+}
+
 // Customer
 export const customerApi = {
+  getBanners: () =>
+    request<{ items: ApiBanner[] }>("/customer/banners"),
+  getCategories: () =>
+    request<{ items: ApiCategory[] }>("/customer/categories"),
   getServices: (page = 1, limit = 50, search = "") =>
     request<{
       items: Array<{
         _id: string;
         name: string;
-        category?: string;
+        category?: { _id: string; name: string; imageUrl?: string } | string | null;
         description?: string;
         imageUrl?: string;
         basePrice: number;
@@ -183,7 +203,7 @@ export function mapApiServiceToUi(
   item: {
     _id: string;
     name: string;
-    category?: string;
+    category?: { _id: string; name: string; imageUrl?: string } | string | null;
     description?: string;
     imageUrl?: string;
     basePrice: number;
@@ -191,7 +211,11 @@ export function mapApiServiceToUi(
   },
   defaultImage: string,
 ): import("@/types").Service {
-  const category = (item.category || "Other").toLowerCase();
+  const cat = item.category;
+  const category =
+    typeof cat === "object" && cat && "name" in cat
+      ? cat.name.toLowerCase()
+      : (cat || "other").toString().toLowerCase();
   return {
     id: item._id,
     name: item.name,
