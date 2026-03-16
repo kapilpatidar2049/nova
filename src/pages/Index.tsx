@@ -8,6 +8,7 @@ import { useApp } from "@/contexts/AppContext";
 import heroBanner from "@/assets/hero-banner.png";
 import { customerApi, mapApiServiceToUi, type ApiBanner, type ApiCategory } from "@/lib/api";
 import serviceHair from "@/assets/service-hair.png";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 
 const Index = () => {
   const [search, setSearch] = useState("");
@@ -92,24 +93,33 @@ const Index = () => {
       </div>
 
       <div className="px-4 space-y-6 mt-5">
-        {/* Dynamic Banners */}
+        {/* Dynamic Banners - Slider */}
         {banners.length > 0 ? (
-          <div className="space-y-3">
-            {banners.map((banner) => (
-              <div key={banner._id} className="relative rounded-2xl overflow-hidden shadow-salon">
-                <img
-                  src={banner.imageUrl}
-                  alt={banner.title}
-                  className="w-full h-36 object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 to-transparent flex flex-col justify-center p-5">
-                  <span className="text-primary-foreground text-xs font-semibold tracking-wider uppercase">
-                    {banner.title}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Carousel
+            opts={{
+              loop: true,
+            }}
+            className="w-full"
+          >
+            <CarouselContent>
+              {banners.map((banner) => (
+                <CarouselItem key={banner._id}>
+                  <div className="relative rounded-2xl overflow-hidden shadow-salon">
+                    <img
+                      src={banner.imageUrl}
+                      alt={banner.title}
+                      className="w-full h-36 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 to-transparent flex flex-col justify-center p-5">
+                      <span className="text-primary-foreground text-xs font-semibold tracking-wider uppercase">
+                        {banner.title}
+                      </span>
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
         ) : (
           <div className="relative rounded-2xl overflow-hidden shadow-salon">
             <img src={heroBanner} alt="Special offers" className="w-full h-36 object-cover" />
