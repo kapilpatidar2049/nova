@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/contexts/AppContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Splash from "./pages/Splash";
@@ -29,7 +29,7 @@ const App = () => (
         <AppProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <HashRouter>
             <div className="max-w-lg mx-auto min-h-screen bg-background relative">
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
               <Routes>
@@ -49,7 +49,7 @@ const App = () => (
               </Routes>
               </Suspense>
             </div>
-          </BrowserRouter>
+          </HashRouter>
         </AppProvider>
       </TooltipProvider>
     </QueryClientProvider>

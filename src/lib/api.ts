@@ -146,6 +146,7 @@ export const customerApi = {
         name: string;
         category?: { _id: string; name: string; imageUrl?: string } | string | null;
         description?: string;
+        includes?: string[];
         imageUrl?: string;
         basePrice: number;
         durationMinutes: number;
@@ -205,6 +206,7 @@ export function mapApiServiceToUi(
     name: string;
     category?: { _id: string; name: string; imageUrl?: string } | string | null;
     description?: string;
+    includes?: string[];
     imageUrl?: string;
     basePrice: number;
     durationMinutes: number;
@@ -226,6 +228,6 @@ export function mapApiServiceToUi(
     duration: `${item.durationMinutes} min`,
     image: item.imageUrl || defaultImage,
     description: item.description || "",
-    includes: [],
+    includes: item.includes && Array.isArray(item.includes) ? item.includes : [],
   };
 }
