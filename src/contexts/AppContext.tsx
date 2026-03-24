@@ -8,6 +8,7 @@ import {
   customerApi,
   authApi,
 } from "@/lib/api";
+import { openRazorpayCheckout } from "@/lib/razorpay";
 import { getFCMToken, isFirebaseConfigured } from "@/lib/firebase";
 
 const DEFAULT_IMG = "";
@@ -52,6 +53,7 @@ interface AppContextType extends AppState {
   updateProfile: (payload: { name?: string; phone?: string }) => Promise<{ ok: boolean; error?: string }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   deleteAccount: (password: string) => Promise<{ ok: boolean; error?: string }>;
+  rechargeWallet: (amount: number) => Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Convert "10:00 AM" / "02:30 PM" to 24h "HH:MM:00" for ISO datetime. */
@@ -228,7 +230,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     cart: loadCartFromStorage(),
     wishlist: loadWishlistFromStorage(),
     orders: [],
-    walletBalance: 500,
+    walletBalance: 0,
     servicesLoading: false,
     ordersLoading: false,
   });
@@ -262,10 +264,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           existing?.id ||
           (d as { id?: string }).id ||
           String((d as { _id?: string })._id || "");
+        const walletBalance = typeof d.walletBalance === "number" ? d.walletBalance : 0;
         setUser({ id, name: d.name, email: d.email, phone: d.phone });
         setState((s) => ({
           ...s,
           user: { name: d.name, email: d.email, phone: d.phone || "" },
+          walletBalance,
         }));
       }
     } catch {
@@ -309,8 +313,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (state.isLoggedIn) {
       refreshOrders();
+      refreshProfile();
     }
-  }, [state.isLoggedIn, refreshOrders]);
+  }, [state.isLoggedIn, refreshOrders, refreshProfile]);
 
   useEffect(() => {
     try {
@@ -437,6 +442,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [logout]);
 
+  const rechargeWallet = useCallback(
+    async (amount: number) => {
+      if (!getUser()) return { ok: false as const, error: "Sign in required" };
+      try {
+        const init = await customerApi.initiateWalletRecharge(amount);
+        if (!init.success || !init.data?.paymentId || !init.data?.orderId || !init.data?.keyId) {
+          return { ok: false as const, error: init.message || "Could not start payment" };
+        }
+        const rzp = await openRazorpayCheckout({
+          keyId: init.data.keyId,
+          orderId: init.data.orderId,
+          name: state.user?.name || "Customer",
+          email: state.user?.email,
+          phone: state.user?.phone,
+          description: "Wallet recharge",
+        });
+        const verified = await customerApi.verifyPayment({
+          paymentId: init.data.paymentId,
+          providerPaymentId: rzp.razorpay_payment_id,
+          providerSignature: rzp.razorpay_signature,
+        });
+        if (!verified.success) return { ok: false as const, error: "Could not verify payment" };
+        await refreshProfile();
+        return { ok: true as const };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Payment failed";
+        if (msg === "Payment cancelled") return { ok: false as const, error: "Cancelled" };
+        return { ok: false as const, error: msg };
+      }
+    },
+    [state.user, refreshProfile]
+  );
+
   const addToCart = (service: Service) =>
     setState((s) => {
       const normalized = normalizeServiceForCart(service);
@@ -519,13 +557,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const appointmentId = (res.data as { _id: string })._id;
         if (options?.processOnlinePayment && paymentMode === "online") {
           const initiated = await customerApi.initiatePayment(appointmentId);
-          if (initiated.success && initiated.data?.paymentId) {
-            await customerApi.verifyPayment({
-              paymentId: initiated.data.paymentId,
-              providerPaymentId: `pay_mock_${Date.now()}`,
-              providerSignature: `sig_mock_${Date.now()}`,
-            });
+          if (!initiated.success || !initiated.data?.paymentId || !initiated.data?.orderId || !initiated.data?.keyId) {
+            await customerApi.cancelAppointment(appointmentId).catch(() => {});
+            return null;
           }
+          try {
+            const rzp = await openRazorpayCheckout({
+              keyId: initiated.data.keyId,
+              orderId: initiated.data.orderId,
+              name: state.user?.name || "Customer",
+              email: state.user?.email,
+              phone: state.user?.phone,
+              description: "Service booking",
+            });
+            const verified = await customerApi.verifyPayment({
+              paymentId: initiated.data.paymentId,
+              providerPaymentId: rzp.razorpay_payment_id,
+              providerSignature: rzp.razorpay_signature,
+            });
+            if (!verified.success) throw new Error("Verification failed");
+          } catch {
+            await customerApi.cancelAppointment(appointmentId).catch(() => {});
+            return null;
+          }
+        }
+        if (paymentMode === "wallet") {
+          await refreshProfile();
         }
         setState((s) => ({ ...s, cart: [] }));
         await refreshOrders();
@@ -569,6 +626,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         updateProfile,
         changePassword,
         deleteAccount,
+        rechargeWallet,
       }}
     >
       {children}

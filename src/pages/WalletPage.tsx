@@ -1,11 +1,38 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Wallet, Sparkles } from "lucide-react";
+import { ArrowLeft, Wallet, Sparkles, IndianRupee } from "lucide-react";
+import { toast } from "sonner";
 import { useApp } from "@/contexts/AppContext";
 import BottomNav from "@/components/BottomNav";
 
+const QUICK_AMOUNTS = [100, 250, 500, 1000];
+
 const WalletPage = () => {
   const navigate = useNavigate();
-  const { walletBalance } = useApp();
+  const { walletBalance, rechargeWallet, isLoggedIn } = useApp();
+  const [amount, setAmount] = useState("");
+  const [paying, setPaying] = useState(false);
+
+  const handleRecharge = async () => {
+    if (!isLoggedIn) {
+      toast.error("Please sign in to recharge your wallet");
+      return;
+    }
+    const n = Number(String(amount).replace(/[^\d.]/g, ""));
+    if (!Number.isFinite(n) || n < 1) {
+      toast.error("Enter an amount of at least ₹1");
+      return;
+    }
+    setPaying(true);
+    const res = await rechargeWallet(Math.floor(n));
+    setPaying(false);
+    if (res.ok) {
+      toast.success("Wallet recharged successfully");
+      setAmount("");
+    } else if (res.error && res.error !== "Cancelled") {
+      toast.error(res.error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -28,16 +55,55 @@ const WalletPage = () => {
           </div>
           <p className="text-4xl font-bold mt-2">₹{walletBalance.toLocaleString("en-IN")}</p>
           <p className="text-xs mt-2 opacity-90">
-            You can pay with wallet when you checkout a booking (choose Wallet on the payment step).
+            Recharge with Razorpay (test keys in Dashboard test mode, live keys for production). Pay bookings with wallet at
+            checkout when balance covers the total.
           </p>
+        </div>
+
+        <div className="bg-card rounded-xl p-4 shadow-card space-y-3">
+          <h2 className="font-display font-semibold text-foreground">Recharge wallet</h2>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_AMOUNTS.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => setAmount(String(q))}
+                className="px-3 py-1.5 rounded-lg bg-muted text-sm font-medium text-foreground hover:bg-muted/80"
+              >
+                ₹{q}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
+            <IndianRupee className="w-5 h-5 text-muted-foreground shrink-0" />
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Amount (₹)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+              disabled={paying}
+            />
+          </div>
+          <button
+            type="button"
+            disabled={paying || !isLoggedIn}
+            onClick={() => void handleRecharge()}
+            className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50"
+          >
+            {paying ? "Opening Razorpay…" : "Pay with Razorpay"}
+          </button>
+          {!isLoggedIn && (
+            <p className="text-xs text-muted-foreground text-center">Sign in to recharge your wallet.</p>
+          )}
         </div>
 
         <div className="bg-card rounded-xl p-4 shadow-card">
           <h2 className="font-display font-semibold text-foreground mb-2">How it works</h2>
           <ul className="text-sm text-muted-foreground space-y-2 list-disc pl-4">
-            <li>Add services to cart and complete booking as usual.</li>
-            <li>On the payment screen, select &quot;Wallet&quot; if your balance covers the total.</li>
-            <li>This screen is only for viewing balance — not for booking checkout.</li>
+            <li>Add money here using Razorpay (same checkout as online booking).</li>
+            <li>Add services to cart and choose Wallet on the payment step if your balance covers the total.</li>
           </ul>
         </div>
 

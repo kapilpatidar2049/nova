@@ -114,7 +114,9 @@ export const authApi = {
       { method: "POST", body: JSON.stringify(body) }
     ),
   profile: () =>
-    request<{ name: string; email: string; phone?: string; id?: string; _id?: string }>("/auth/profile"),
+    request<{ name: string; email: string; phone?: string; id?: string; _id?: string; walletBalance?: number }>(
+      "/auth/profile"
+    ),
   updateProfile: (body: { name?: string; phone?: string }) =>
     request<{ name: string; email: string; phone?: string; id?: string; _id?: string }>("/auth/update-profile", {
       method: "PUT",
@@ -212,10 +214,25 @@ export const customerApi = {
       `/customer/track/${appointmentId}`
     ),
   initiatePayment: (appointmentId: string) =>
-    request<{ paymentId: string; orderId: string; amount: number; currency: string }>(
-      "/customer/payment/initiate",
-      { method: "POST", body: JSON.stringify({ appointmentId }) }
-    ),
+    request<{
+      paymentId: string;
+      orderId: string;
+      amount: number;
+      amountPaise?: number;
+      currency: string;
+      keyId: string;
+      mode: "test" | "live";
+    }>("/customer/payment/initiate", { method: "POST", body: JSON.stringify({ appointmentId }) }),
+  initiateWalletRecharge: (amount: number) =>
+    request<{
+      paymentId: string;
+      orderId: string;
+      amount: number;
+      amountPaise?: number;
+      currency: string;
+      keyId: string;
+      mode: "test" | "live";
+    }>("/customer/wallet/recharge/initiate", { method: "POST", body: JSON.stringify({ amount }) }),
   verifyPayment: (body: { paymentId: string; providerPaymentId: string; providerSignature: string }) =>
     request("/customer/payment/verify", { method: "POST", body: JSON.stringify(body) }),
   getInvoices: (page = 1, limit = 20) =>
