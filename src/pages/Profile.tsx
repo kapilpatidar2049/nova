@@ -1,5 +1,17 @@
 import { useNavigate } from "react-router-dom";
-import { User, Heart, MapPin, Wallet, HelpCircle, LogOut, ChevronRight, Sparkles, UserRound } from "lucide-react";
+import {
+  User,
+  Heart,
+  MapPin,
+  Wallet,
+  HelpCircle,
+  LogOut,
+  ChevronRight,
+  Sparkles,
+  UserRound,
+  KeyRound,
+  UserX,
+} from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import BottomNav from "@/components/BottomNav";
 
@@ -10,8 +22,8 @@ const Profile = () => {
   const menuItems = [
     { icon: UserRound, label: "Edit profile", action: () => navigate("/profile/edit") },
     { icon: Heart, label: "Wishlist", value: `${wishlist.length} items`, action: () => navigate("/wishlist") },
-    { icon: MapPin, label: "My Addresses", action: () => navigate("/booking") },
-    { icon: Wallet, label: "Wallet", value: `₹${walletBalance}`, action: () => navigate("/payment") },
+    { icon: MapPin, label: "My Addresses", action: () => navigate("/addresses") },
+    { icon: Wallet, label: "Wallet", value: `₹${walletBalance}`, action: () => navigate("/wallet") },
     { icon: HelpCircle, label: "Help & Support", action: () => navigate("/about") },
   ];
 
@@ -34,6 +46,7 @@ const Profile = () => {
         <div className="bg-card rounded-xl shadow-card overflow-hidden">
           {menuItems.map((item, i) => (
             <button
+              type="button"
               key={item.label}
               onClick={item.action}
               className={`w-full flex items-center gap-3 px-4 py-4 text-left ${i < menuItems.length - 1 ? "border-b border-border" : ""}`}
@@ -46,7 +59,29 @@ const Profile = () => {
           ))}
         </div>
 
+        <div className="bg-card rounded-xl shadow-card overflow-hidden mt-4">
+          <button
+            type="button"
+            onClick={() => navigate("/profile/change-password")}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left border-b border-border"
+          >
+            <KeyRound className="w-5 h-5 text-primary" />
+            <span className="flex-1 text-sm font-medium text-foreground">Update password</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/profile/delete-account")}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left"
+          >
+            <UserX className="w-5 h-5 text-destructive" />
+            <span className="flex-1 text-sm font-medium text-destructive">Delete account</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+
         <button
+          type="button"
           onClick={() => { logout(); navigate("/login"); }}
           className="w-full mt-4 bg-card rounded-xl shadow-card flex items-center gap-3 px-4 py-4 text-left"
         >

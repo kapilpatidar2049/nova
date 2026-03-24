@@ -19,6 +19,10 @@ import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
+import WalletPage from "./pages/WalletPage";
+import MyAddresses from "./pages/MyAddresses";
+import ChangePassword from "./pages/ChangePassword";
+import DeleteAccount from "./pages/DeleteAccount";
 import Wishlist from "./pages/Wishlist";
 import Notifications from "./pages/Notifications";
 import StaticPage from "./pages/StaticPage";
@@ -50,6 +54,10 @@ const App = () => (
               <Route path="/order/:id" element={<OrderDetail />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/edit" element={<EditProfile />} />
+              <Route path="/profile/change-password" element={<ChangePassword />} />
+              <Route path="/profile/delete-account" element={<DeleteAccount />} />
+              <Route path="/wallet" element={<WalletPage />} />
+              <Route path="/addresses" element={<MyAddresses />} />
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/privacy-policy" element={<StaticPage title="Privacy Policy" />} />

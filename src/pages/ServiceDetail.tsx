@@ -53,6 +53,15 @@ const ServiceDetail = () => {
 
   const isWishlisted = wishlist.some((wid) => String(wid) === String(service.id));
 
+  const handleWishlist = () => {
+    const sid = String(service.id ?? "").trim();
+    const wasListed = wishlist.some((wid) => String(wid) === sid);
+    toggleWishlist(sid);
+    if (/^[a-f0-9]{24}$/i.test(sid)) {
+      toast.success(wasListed ? "Removed from favourites" : "Service added to favourites");
+    }
+  };
+
   const handleAddToCart = () => {
     if (!service.id) {
       toast.error("Service is missing an ID. Please try again.");
@@ -71,7 +80,7 @@ const ServiceDetail = () => {
         <button onClick={() => navigate(-1)} className="absolute top-12 left-4 w-9 h-9 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <button onClick={() => toggleWishlist(service.id)} className="absolute top-12 right-4 w-9 h-9 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center">
+        <button type="button" onClick={handleWishlist} className="absolute top-12 right-4 w-9 h-9 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center">
           <Heart className={`w-5 h-5 ${isWishlisted ? "fill-primary text-primary" : "text-foreground"}`} />
         </button>
       </div>

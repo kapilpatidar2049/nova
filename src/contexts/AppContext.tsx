@@ -50,6 +50,8 @@ interface AppContextType extends AppState {
   refreshOrders: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (payload: { name?: string; phone?: string }) => Promise<{ ok: boolean; error?: string }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ ok: boolean; error?: string }>;
+  deleteAccount: (password: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Convert "10:00 AM" / "02:30 PM" to 24h "HH:MM:00" for ISO datetime. */
@@ -294,6 +296,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    try {
+      const res = await authApi.changePassword({ currentPassword, newPassword });
+      if (res.success) return { ok: true as const };
+      return { ok: false as const, error: (res as { message?: string }).message || "Could not update password" };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : "Could not update password" };
+    }
+  }, []);
+
   useEffect(() => {
     if (state.isLoggedIn) {
       refreshOrders();
@@ -411,6 +423,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       cart: [],
     }));
   };
+
+  const deleteAccount = useCallback(async (password: string) => {
+    try {
+      const res = await authApi.deleteAccount({ password });
+      if (res.success) {
+        logout();
+        return { ok: true as const };
+      }
+      return { ok: false as const, error: (res as { message?: string }).message || "Could not delete account" };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : "Could not delete account" };
+    }
+  }, [logout]);
 
   const addToCart = (service: Service) =>
     setState((s) => {
@@ -542,6 +567,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         refreshOrders,
         refreshProfile,
         updateProfile,
+        changePassword,
+        deleteAccount,
       }}
     >
       {children}

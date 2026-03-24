@@ -120,6 +120,10 @@ export const authApi = {
       method: "PUT",
       body: JSON.stringify(body),
     }),
+  changePassword: (body: { currentPassword: string; newPassword: string }) =>
+    request("/auth/change-password", { method: "POST", body: JSON.stringify(body) }),
+  deleteAccount: (body: { password: string }) =>
+    request("/auth/delete-account", { method: "POST", body: JSON.stringify(body) }),
 };
 
 // Banners & Categories (for home screen)

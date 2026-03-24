@@ -1,5 +1,6 @@
 import { Star, Heart, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import type { Service } from "@/types";
 import { useApp } from "@/contexts/AppContext";
 
@@ -7,6 +8,16 @@ const ServiceCard = ({ service, variant = "grid" }: { service: Service; variant?
   const navigate = useNavigate();
   const { addToCart, toggleWishlist, wishlist } = useApp();
   const isWishlisted = wishlist.some((id) => String(id) === String(service.id));
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const sid = String(service.id ?? "").trim();
+    const wasListed = wishlist.some((id) => String(id) === sid);
+    toggleWishlist(sid);
+    if (/^[a-f0-9]{24}$/i.test(sid)) {
+      toast.success(wasListed ? "Removed from favourites" : "Service added to favourites");
+    }
+  };
 
   if (variant === "list") {
     return (
@@ -18,7 +29,7 @@ const ServiceCard = ({ service, variant = "grid" }: { service: Service; variant?
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <h3 className="font-semibold text-sm text-foreground truncate pr-2">{service.name}</h3>
-            <button onClick={(e) => { e.stopPropagation(); toggleWishlist(service.id); }} className="shrink-0">
+            <button type="button" onClick={handleWishlistClick} className="shrink-0">
               <Heart className={`w-4 h-4 ${isWishlisted ? "fill-primary text-primary" : "text-muted-foreground"}`} />
             </button>
           </div>
@@ -55,7 +66,8 @@ const ServiceCard = ({ service, variant = "grid" }: { service: Service; variant?
       <div className="relative">
         <img src={service.image} alt={service.name} className="w-full h-32 object-cover" />
         <button
-          onClick={(e) => { e.stopPropagation(); toggleWishlist(service.id); }}
+          type="button"
+          onClick={handleWishlistClick}
           className="absolute top-2 right-2 w-7 h-7 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center"
         >
           <Heart className={`w-3.5 h-3.5 ${isWishlisted ? "fill-primary text-primary" : "text-foreground"}`} />
