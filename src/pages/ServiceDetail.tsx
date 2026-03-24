@@ -87,7 +87,7 @@ const ServiceDetail = () => {
         <div className="mt-4 bg-card rounded-2xl p-5 shadow-card">
           <h2 className="font-display font-bold text-foreground mb-3">What's Included</h2>
           <div className="space-y-2">
-            {service.includes.map((item) => (
+            {(service.includes || []).map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
                   <Check className="w-3 h-3 text-accent-foreground" />

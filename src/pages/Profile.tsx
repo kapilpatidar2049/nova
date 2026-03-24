@@ -8,10 +8,10 @@ const Profile = () => {
   const { user, walletBalance, logout, wishlist } = useApp();
 
   const menuItems = [
-    { icon: Heart, label: "Wishlist", value: `${wishlist.length} items`, action: () => {} },
-    { icon: MapPin, label: "My Addresses", action: () => {} },
-    { icon: Wallet, label: "Wallet", value: `₹${walletBalance}`, action: () => {} },
-    { icon: HelpCircle, label: "Help & Support", action: () => {} },
+    { icon: Heart, label: "Wishlist", value: `${wishlist.length} items`, action: () => navigate("/wishlist") },
+    { icon: MapPin, label: "My Addresses", action: () => navigate("/booking") },
+    { icon: Wallet, label: "Wallet", value: `₹${walletBalance}`, action: () => navigate("/payment") },
+    { icon: HelpCircle, label: "Help & Support", action: () => navigate("/about") },
   ];
 
   return (
@@ -52,6 +52,13 @@ const Profile = () => {
           <LogOut className="w-5 h-5 text-destructive" />
           <span className="text-sm font-medium text-destructive">Logout</span>
         </button>
+
+        <div className="mt-4 bg-card rounded-xl shadow-card overflow-hidden">
+          <button onClick={() => navigate("/privacy-policy")} className="w-full flex items-center justify-between px-4 py-3 text-sm border-b border-border">Privacy Policy <ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
+          <button onClick={() => navigate("/terms-and-conditions")} className="w-full flex items-center justify-between px-4 py-3 text-sm border-b border-border">Terms & Conditions <ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
+          <button onClick={() => navigate("/about")} className="w-full flex items-center justify-between px-4 py-3 text-sm border-b border-border">About Us <ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
+          <button onClick={() => navigate("/notifications")} className="w-full flex items-center justify-between px-4 py-3 text-sm">Alerts <ChevronRight className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
 
         <div className="mt-8 text-center">
           <div className="flex items-center justify-center gap-1 text-muted-foreground">

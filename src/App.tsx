@@ -18,6 +18,9 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import Profile from "./pages/Profile";
+import Wishlist from "./pages/Wishlist";
+import Notifications from "./pages/Notifications";
+import StaticPage from "./pages/StaticPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +48,11 @@ const App = () => (
               <Route path="/orders" element={<Orders />} />
               <Route path="/order/:id" element={<OrderDetail />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/wishlist" element={<Wishlist />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/privacy-policy" element={<StaticPage title="Privacy Policy" />} />
+              <Route path="/terms-and-conditions" element={<StaticPage title="Terms and Conditions" />} />
+              <Route path="/about" element={<StaticPage title="About Us" />} />
               <Route path="*" element={<NotFound />} />
               </Routes>
               </Suspense>

@@ -20,7 +20,7 @@ const Payment = () => {
       paymentMode,
       status: "booked",
       total: cartTotal,
-    });
+    }, { processOnlinePayment: true });
     setPaying(false);
     if (orderId) navigate("/order-confirmation", { state: { orderId } });
   };
@@ -86,7 +86,7 @@ const Payment = () => {
 
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
         <button onClick={handlePay} disabled={paying} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50">
-          {paying ? "Booking..." : `Pay ₹${cartTotal}`}
+          {paying ? "Booking..." : paymentMode === "cod" ? `Confirm COD ₹${cartTotal}` : `Pay ₹${cartTotal}`}
         </button>
       </div>
     </div>

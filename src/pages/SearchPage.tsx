@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, Search, SlidersHorizontal, X, Heart } from "lucide-react";
 import type { Service } from "@/types";
 import ServiceCard from "@/components/ServiceCard";
 import BottomNav from "@/components/BottomNav";
@@ -119,6 +119,12 @@ const SearchPage = () => {
             </span>
           )}
         </button>
+        <button
+          onClick={() => navigate("/wishlist")}
+          className="w-9 h-9 rounded-full bg-card shadow-card flex items-center justify-center"
+        >
+          <Heart className="w-4 h-4 text-foreground" />
+        </button>
       </div>
 
       {/* Filters Panel */}
@@ -135,7 +141,7 @@ const SearchPage = () => {
                     selectedCats.includes(cat.id) ? "gradient-primary text-primary-foreground" : "bg-card shadow-card text-foreground"
                   }`}
                 >
-                  {cat.icon} {cat.name}
+                  {cat.name}
                 </button>
               ))}
             </div>

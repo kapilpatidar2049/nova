@@ -42,7 +42,10 @@ interface AppContextType extends AppState {
   toggleWishlist: (serviceId: string) => void;
   cartTotal: number;
   cartCount: number;
-  createOrder: (order: Omit<BookingOrder, "id" | "createdAt">) => Promise<string | null>;
+  createOrder: (
+    order: Omit<BookingOrder, "id" | "createdAt">,
+    options?: { processOnlinePayment?: boolean }
+  ) => Promise<string | null>;
   cancelOrder: (orderId: string) => Promise<void>;
   refreshOrders: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -63,11 +66,12 @@ function timeSlotToISOTime(timeSlot: string): string {
 function mapApiAppointmentToOrder(item: {
   _id: string;
   service: { _id: string; name: string; basePrice: number; durationMinutes: number };
-  beautician?: { _id: string; name: string };
+  beautician?: { _id: string; name: string; servicesCompleted?: number; rating?: number; experienceYears?: number };
   scheduledAt?: string | null;
   address: string;
   status: string;
   price: number;
+  paymentMode?: string;
   createdAt?: string;
 }): BookingOrder {
   const statusMap: Record<string, BookingOrder["status"]> = {
@@ -111,16 +115,21 @@ function mapApiAppointmentToOrder(item: {
     date: dateStr,
     timeSlot,
     address: item.address,
-    paymentMode: "Online",
+    paymentMode:
+      item.paymentMode === "cod"
+        ? "Cash on Delivery"
+        : item.paymentMode === "wallet"
+          ? "Wallet"
+          : "Online Payment",
     status,
     beautician: item.beautician
       ? {
           id: item.beautician._id,
           name: item.beautician.name,
           image: "/placeholder-beautician.png",
-          rating: 4.5,
-          experience: "",
-          servicesCompleted: 0,
+          rating: item.beautician.rating || 4.5,
+          experience: item.beautician.experienceYears ? `${item.beautician.experienceYears}+ years` : "",
+          servicesCompleted: item.beautician.servicesCompleted || 0,
           specialties: [],
         }
       : undefined,
@@ -303,7 +312,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const cartTotal = state.cart.reduce((t, i) => t + i.service.price * i.quantity, 0);
   const cartCount = state.cart.reduce((t, i) => t + i.quantity, 0);
 
-  const createOrder = async (order: Omit<BookingOrder, "id" | "createdAt">): Promise<string | null> => {
+  const createOrder = async (
+    order: Omit<BookingOrder, "id" | "createdAt">,
+    options?: { processOnlinePayment?: boolean }
+  ): Promise<string | null> => {
     let scheduledAt: string;
     try {
       const dateStr = order.date || new Date().toISOString().split("T")[0];
@@ -324,11 +336,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         lat: 19.06,
         lng: 72.83,
         price: total,
+        paymentMode: order.paymentMode?.toLowerCase() as "online" | "cod" | "wallet" | undefined,
       });
       if (res.success && res.data) {
+        const appointmentId = (res.data as { _id: string })._id;
+        if (options?.processOnlinePayment && order.paymentMode?.toLowerCase() === "online") {
+          const initiated = await customerApi.initiatePayment(appointmentId);
+          if (initiated.success && initiated.data?.paymentId) {
+            await customerApi.verifyPayment({
+              paymentId: initiated.data.paymentId,
+              providerPaymentId: `pay_mock_${Date.now()}`,
+              providerSignature: `sig_mock_${Date.now()}`,
+            });
+          }
+        }
         setState((s) => ({ ...s, cart: [] }));
         await refreshOrders();
-        return (res.data as { _id: string })._id;
+        return appointmentId;
       }
     } catch {
       // ignore

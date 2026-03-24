@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Bell, Sparkles, ImageIcon } from "lucide-react";
+import { Search, Bell, Sparkles, ImageIcon, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import ServiceCard from "@/components/ServiceCard";
@@ -8,7 +8,6 @@ import { useApp } from "@/contexts/AppContext";
 import heroBanner from "@/assets/hero-banner.png";
 import { customerApi, mapApiServiceToUi, type ApiBanner, type ApiCategory } from "@/lib/api";
 import serviceHair from "@/assets/service-hair.png";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 
 const Index = () => {
   const [search, setSearch] = useState("");
@@ -64,7 +63,7 @@ const Index = () => {
 
   const filtered = services.filter((s) => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = !activeCategoryName || s.category === activeCategoryName;
+    const matchCat = !activeCategoryName || s.category === activeCategoryName || s.category.includes(activeCategoryName);
     return matchSearch && matchCat;
   });
 
@@ -79,9 +78,14 @@ const Index = () => {
             <Sparkles className="w-6 h-6 text-primary-foreground" />
             <span className="text-lg font-display font-bold text-primary-foreground">Nova </span>
           </div>
-          <button className="w-9 h-9 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/wishlist")} className="w-9 h-9 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+            <Heart className="w-4 h-4 text-primary-foreground" />
+          </button>
+          <button onClick={() => navigate("/notifications")} className="w-9 h-9 rounded-full bg-primary-foreground/20 flex items-center justify-center">
             <Bell className="w-4 h-4 text-primary-foreground" />
           </button>
+          </div>
         </div>
         <button
           onClick={() => navigate("/search")}
@@ -95,31 +99,22 @@ const Index = () => {
       <div className="px-4 space-y-6 mt-5">
         {/* Dynamic Banners - Slider */}
         {banners.length > 0 ? (
-          <Carousel
-            opts={{
-              loop: true,
-            }}
-            className="w-full"
-          >
-            <CarouselContent>
-              {banners.map((banner) => (
-                <CarouselItem key={banner._id}>
-                  <div className="relative rounded-2xl overflow-hidden shadow-salon">
-                    <img
-                      src={banner.imageUrl}
-                      alt={banner.title}
-                      className="w-full h-36 object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 to-transparent flex flex-col justify-center p-5">
-                      <span className="text-primary-foreground text-xs font-semibold tracking-wider uppercase">
-                        {banner.title}
-                      </span>
-                    </div>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
+          <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
+            {banners.map((banner) => (
+              <div key={banner._id} className="relative rounded-2xl overflow-hidden shadow-salon min-w-full snap-center">
+                <img
+                  src={banner.imageUrl}
+                  alt={banner.title}
+                  className="w-full h-36 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 to-transparent flex flex-col justify-center p-5">
+                  <span className="text-primary-foreground text-xs font-semibold tracking-wider uppercase">
+                    {banner.title}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="relative rounded-2xl overflow-hidden shadow-salon">
             <img src={heroBanner} alt="Special offers" className="w-full h-36 object-cover" />

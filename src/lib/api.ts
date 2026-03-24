@@ -161,11 +161,12 @@ export const customerApi = {
       items: Array<{
         _id: string;
         service: { _id: string; name: string; basePrice: number; durationMinutes: number };
-        beautician?: { _id: string; name: string };
+        beautician?: { _id: string; name: string; servicesCompleted?: number; rating?: number; experienceYears?: number };
         scheduledAt: string;
         address: string;
         status: string;
         price: number;
+        paymentMode?: string;
         createdAt: string;
       }>;
       meta: unknown;
@@ -174,14 +175,15 @@ export const customerApi = {
     request<{
       _id: string;
       service: { _id: string; name: string; basePrice: number; durationMinutes: number };
-      beautician?: { _id: string; name: string };
+      beautician?: { _id: string; name: string; servicesCompleted?: number; rating?: number; experienceYears?: number };
       scheduledAt: string;
       address: string;
       status: string;
       price: number;
+      paymentMode?: string;
       createdAt: string;
     }>(`/customer/appointments/${id}`),
-  createAppointment: (body: { serviceId: string; scheduledAt: string; address: string; lat: number; lng: number; price: number }) =>
+  createAppointment: (body: { serviceId: string; scheduledAt: string; address: string; lat: number; lng: number; price: number; paymentMode?: "online" | "cod" | "wallet" }) =>
     request<{ _id: string }>("/customer/appointments", { method: "POST", body: JSON.stringify(body) }),
   cancelAppointment: (id: string) =>
     request(`/customer/appointments/${id}/cancel`, { method: "PUT" }),
@@ -218,10 +220,12 @@ export function mapApiServiceToUi(
     typeof cat === "object" && cat && "name" in cat
       ? cat.name.toLowerCase()
       : (cat || "other").toString().toLowerCase();
+  const categoryId = typeof cat === "object" && cat && "_id" in cat ? cat._id : undefined;
   return {
     id: item._id,
     name: item.name,
     category,
+    categoryId,
     price: item.basePrice,
     rating: 4.5,
     reviews: 0,

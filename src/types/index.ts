@@ -2,6 +2,7 @@ export interface Service {
   id: string;
   name: string;
   category: string;
+  categoryId?: string;
   price: number;
   originalPrice?: number;
   rating: number;
