@@ -15,21 +15,46 @@ const Wishlist = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (wishlist.length === 0) {
+      setServices([]);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
+      setLoading(true);
       try {
-        const res = await customerApi.getServices(1, 200, "");
-        if (!cancelled && res.success && res.data?.items) {
-          setServices(res.data.items.map((s) => mapApiServiceToUi(s, serviceHair)));
+        const res = await customerApi.getServices(1, 100, "");
+        const fromList =
+          res.success && res.data?.items
+            ? res.data.items.map((s) => mapApiServiceToUi(s, serviceHair))
+            : [];
+        const byId = new Map(fromList.map((s) => [String(s.id), s]));
+        const missing = wishlist.filter((wid) => !byId.has(String(wid)));
+        await Promise.all(
+          missing.map(async (wid) => {
+            try {
+              const one = await customerApi.getServiceById(wid);
+              if (one.success && one.data && !cancelled) {
+                byId.set(String(wid), mapApiServiceToUi(one.data, serviceHair));
+              }
+            } catch {
+              // removed or inactive service
+            }
+          })
+        );
+        if (!cancelled) {
+          const ordered = wishlist
+            .map((wid) => byId.get(String(wid)))
+            .filter((s): s is Service => s != null);
+          setServices(ordered);
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, []);
-
-  const items = services.filter((s) => wishlist.includes(s.id));
+  }, [wishlist]);
 
   return (
     <div className="min-h-screen bg-background pb-20">

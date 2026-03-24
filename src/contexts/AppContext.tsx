@@ -140,13 +140,27 @@ function mapApiAppointmentToOrder(item: {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const WISHLIST_STORAGE_KEY = "customer_wishlist";
+
+function loadWishlistFromStorage(): string[] {
+  try {
+    const raw = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((x): x is string => typeof x === "string" && x.length > 0).map(String);
+  } catch {
+    return [];
+  }
+}
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const savedUser = getUser();
   const [state, setState] = useState<AppState>({
     isLoggedIn: !!savedUser,
     user: savedUser ? { name: savedUser.name, email: savedUser.email, phone: savedUser.phone || "" } : null,
     cart: [],
-    wishlist: [],
+    wishlist: loadWishlistFromStorage(),
     orders: [],
     walletBalance: 500,
     servicesLoading: false,
@@ -192,6 +206,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       refreshOrders();
     }
   }, [state.isLoggedIn, refreshOrders]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(state.wishlist));
+    } catch {
+      // quota / private mode
+    }
+  }, [state.wishlist]);
 
   useEffect(() => {
     if (!state.isLoggedIn || !isFirebaseConfigured()) return;
@@ -304,10 +326,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = () => setState((s) => ({ ...s, cart: [] }));
 
   const toggleWishlist = (serviceId: string) =>
-    setState((s) => ({
-      ...s,
-      wishlist: s.wishlist.includes(serviceId) ? s.wishlist.filter((id) => id !== serviceId) : [...s.wishlist, serviceId],
-    }));
+    setState((s) => {
+      const sid = String(serviceId);
+      const normalized = s.wishlist.map(String);
+      const has = normalized.includes(sid);
+      return {
+        ...s,
+        wishlist: has ? normalized.filter((id) => id !== sid) : [...normalized, sid],
+      };
+    });
 
   const cartTotal = state.cart.reduce((t, i) => t + i.service.price * i.quantity, 0);
   const cartCount = state.cart.reduce((t, i) => t + i.quantity, 0);

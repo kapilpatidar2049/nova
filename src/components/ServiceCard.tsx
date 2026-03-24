@@ -6,7 +6,7 @@ import { useApp } from "@/contexts/AppContext";
 const ServiceCard = ({ service, variant = "grid" }: { service: Service; variant?: "grid" | "list" }) => {
   const navigate = useNavigate();
   const { addToCart, toggleWishlist, wishlist } = useApp();
-  const isWishlisted = wishlist.includes(service.id);
+  const isWishlisted = wishlist.some((id) => String(id) === String(service.id));
 
   if (variant === "list") {
     return (

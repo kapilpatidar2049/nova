@@ -11,30 +11,46 @@ const ServiceDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { addToCart, toggleWishlist, wishlist } = useApp();
-  const [service, setService] = useState<Service | null>(location.state?.service ?? null);
-  const [loading, setLoading] = useState(!location.state?.service);
+  const fromNavOnMount = location.state?.service as Service | undefined;
+  const initialService =
+    fromNavOnMount && id && String(fromNavOnMount.id) === String(id) ? fromNavOnMount : null;
+  const [service, setService] = useState<Service | null>(initialService);
+  const [loading, setLoading] = useState(!initialService);
 
   useEffect(() => {
-    if (service || !id) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const fromNav = location.state?.service as Service | undefined;
+    if (fromNav && String(fromNav.id) === String(id)) {
+      setService(fromNav);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
+      setLoading(true);
       try {
-        const res = await customerApi.getServices(1, 100, "");
-        if (!cancelled && res.success && res.data?.items) {
-          const list = res.data.items.map((s) => mapApiServiceToUi(s, serviceHair));
-          setService(list.find((s) => s.id === id) ?? null);
+        const res = await customerApi.getServiceById(id);
+        if (!cancelled && res.success && res.data) {
+          setService(mapApiServiceToUi(res.data, serviceHair));
+        } else if (!cancelled) {
+          setService(null);
         }
+      } catch {
+        if (!cancelled) setService(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [id, service]);
+  }, [id, location.key]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-foreground">Loading...</div>;
   if (!service) return <div className="min-h-screen flex items-center justify-center text-foreground">Service not found</div>;
 
-  const isWishlisted = wishlist.includes(service.id);
+  const isWishlisted = wishlist.some((wid) => String(wid) === String(service.id));
 
   return (
     <div className="min-h-screen bg-background pb-24">
