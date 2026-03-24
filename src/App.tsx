@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route } from "react-router-dom";
-import { AppProvider } from "@/contexts/AppContext";
+import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AppProvider, useApp } from "@/contexts/AppContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Splash from "./pages/Splash";
 import Index from "./pages/Index";
@@ -27,8 +27,23 @@ import Wishlist from "./pages/Wishlist";
 import Notifications from "./pages/Notifications";
 import StaticPage from "./pages/StaticPage";
 import NotFound from "./pages/NotFound";
+import RateVisit from "./pages/RateVisit";
 
 const queryClient = new QueryClient();
+
+function MandatoryRatingRedirect() {
+  const location = useLocation();
+  const { isLoggedIn, pendingRatingAppointmentId } = useApp();
+  if (!isLoggedIn || !pendingRatingAppointmentId) return null;
+  const m = location.pathname.match(/^\/rate\/([^/]+)/);
+  if (m) {
+    if (m[1] !== pendingRatingAppointmentId) {
+      return <Navigate to={`/rate/${pendingRatingAppointmentId}`} replace />;
+    }
+    return null;
+  }
+  return <Navigate to={`/rate/${pendingRatingAppointmentId}`} replace />;
+}
 
 const App = () => (
   <ErrorBoundary>
@@ -39,9 +54,11 @@ const App = () => (
           <Sonner />
           <HashRouter>
             <div className="max-w-lg mx-auto min-h-screen bg-background relative">
+              <MandatoryRatingRedirect />
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
               <Routes>
               <Route path="/" element={<Splash />} />
+              <Route path="/rate/:id" element={<RateVisit />} />
               <Route path="/home" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/search" element={<SearchPage />} />

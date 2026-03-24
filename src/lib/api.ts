@@ -237,6 +237,17 @@ export const customerApi = {
     request("/customer/payment/verify", { method: "POST", body: JSON.stringify(body) }),
   getInvoices: (page = 1, limit = 20) =>
     request<{ items: unknown[]; meta: unknown }>("/customer/invoices", { params: { page: String(page), limit: String(limit) } }),
+  getPendingRatings: () =>
+    request<{
+      items: Array<{
+        _id: string;
+        service?: { name?: string };
+        beautician?: { name?: string };
+        completedAt?: string;
+      }>;
+    }>("/customer/appointments/pending-ratings"),
+  rateAppointment: (appointmentId: string, body: { stars: number; comment?: string }) =>
+    request("/customer/appointments/" + appointmentId + "/rate", { method: "POST", body: JSON.stringify(body) }),
 };
 
 export function mapApiServiceToUi(

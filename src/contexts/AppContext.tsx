@@ -27,6 +27,8 @@ interface AppState {
   walletBalance: number;
   servicesLoading: boolean;
   ordersLoading: boolean;
+  /** First completed appointment that still needs customer→beautician rating (mandatory before new bookings). */
+  pendingRatingAppointmentId: string | null;
 }
 
 interface AppContextType extends AppState {
@@ -54,6 +56,7 @@ interface AppContextType extends AppState {
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   deleteAccount: (password: string) => Promise<{ ok: boolean; error?: string }>;
   rechargeWallet: (amount: number) => Promise<{ ok: boolean; error?: string }>;
+  refreshPendingRatings: () => Promise<void>;
 }
 
 /** Convert "10:00 AM" / "02:30 PM" to 24h "HH:MM:00" for ISO datetime. */
@@ -233,6 +236,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     walletBalance: 0,
     servicesLoading: false,
     ordersLoading: false,
+    pendingRatingAppointmentId: null,
   });
 
   const refreshOrders = useCallback(async () => {
@@ -251,6 +255,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch {
       setState((s) => ({ ...s, ordersLoading: false }));
+    }
+  }, []);
+
+  const refreshPendingRatings = useCallback(async () => {
+    if (!getUser()) {
+      setState((s) => ({ ...s, pendingRatingAppointmentId: null }));
+      return;
+    }
+    try {
+      const res = await customerApi.getPendingRatings();
+      if (res.success && res.data?.items?.length) {
+        const first = res.data.items[0];
+        const id = first && typeof first === "object" && "_id" in first ? String((first as { _id: string })._id) : "";
+        setState((s) => ({ ...s, pendingRatingAppointmentId: id || null }));
+      } else {
+        setState((s) => ({ ...s, pendingRatingAppointmentId: null }));
+      }
+    } catch {
+      setState((s) => ({ ...s, pendingRatingAppointmentId: null }));
     }
   }, []);
 
@@ -314,8 +337,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (state.isLoggedIn) {
       refreshOrders();
       refreshProfile();
+      refreshPendingRatings();
     }
-  }, [state.isLoggedIn, refreshOrders, refreshProfile]);
+  }, [state.isLoggedIn, refreshOrders, refreshProfile, refreshPendingRatings]);
 
   useEffect(() => {
     try {
@@ -627,6 +651,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         changePassword,
         deleteAccount,
         rechargeWallet,
+        refreshPendingRatings,
       }}
     >
       {children}
