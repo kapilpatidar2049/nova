@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { ArrowLeft, Star, Clock, Heart, ShoppingBag, Check } from "lucide-react";
+import { toast } from "sonner";
 import type { Service } from "@/types";
 import { useApp } from "@/contexts/AppContext";
 import { customerApi, mapApiServiceToUi } from "@/lib/api";
@@ -51,6 +52,15 @@ const ServiceDetail = () => {
   if (!service) return <div className="min-h-screen flex items-center justify-center text-foreground">Service not found</div>;
 
   const isWishlisted = wishlist.some((wid) => String(wid) === String(service.id));
+
+  const handleAddToCart = () => {
+    if (!service.id) {
+      toast.error("Service is missing an ID. Please try again.");
+      return;
+    }
+    addToCart(service);
+    toast.success("Added to cart");
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -123,14 +133,27 @@ const ServiceDetail = () => {
         </div>
       </div>
 
-      {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 flex gap-3 z-50">
-        <button onClick={() => addToCart(service)} className="flex-1 border-2 border-primary text-primary py-3 rounded-xl font-semibold flex items-center justify-center gap-2">
-          <ShoppingBag className="w-4 h-4" /> Add to Cart
-        </button>
-        <button onClick={() => { addToCart(service); navigate("/cart"); }} className="flex-1 gradient-primary text-primary-foreground py-3 rounded-xl font-semibold shadow-salon">
-          Book Now
-        </button>
+      {/* Bottom Actions — high z-index + max-w-lg so bar stays tappable above page content */}
+      <div className="fixed bottom-0 left-0 right-0 z-[100] bg-card border-t border-border pb-[max(1rem,env(safe-area-inset-bottom,0px))] shadow-[0_-4px_24px_rgba(0,0,0,0.15)] pointer-events-auto">
+        <div className="max-w-lg mx-auto px-4 pt-4 flex gap-3">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            className="flex-1 border-2 border-primary text-primary py-3 rounded-xl font-semibold flex items-center justify-center gap-2 active:opacity-90"
+          >
+            <ShoppingBag className="w-4 h-4" /> Add to Cart
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              handleAddToCart();
+              navigate("/cart");
+            }}
+            className="flex-1 gradient-primary text-primary-foreground py-3 rounded-xl font-semibold shadow-salon active:opacity-90"
+          >
+            Book Now
+          </button>
+        </div>
       </div>
     </div>
   );

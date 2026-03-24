@@ -141,6 +141,7 @@ function mapApiAppointmentToOrder(item: {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const WISHLIST_STORAGE_KEY = "customer_wishlist";
+const CART_STORAGE_KEY = "customer_cart";
 
 function loadWishlistFromStorage(): string[] {
   try {
@@ -148,10 +149,54 @@ function loadWishlistFromStorage(): string[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((x): x is string => typeof x === "string" && x.length > 0).map(String);
+    return parsed
+      .filter((x): x is string => typeof x === "string" && x.length > 0)
+      .map((x) => x.trim())
+      .filter((id) => /^[a-f0-9]{24}$/i.test(id));
   } catch {
     return [];
   }
+}
+
+function loadCartFromStorage(): CartItem[] {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(
+        (row): row is CartItem =>
+          row != null &&
+          typeof row === "object" &&
+          "service" in row &&
+          "quantity" in row &&
+          (row as CartItem).service &&
+          typeof (row as CartItem).quantity === "number"
+      )
+      .map((row) => ({
+        quantity: Math.max(1, (row as CartItem).quantity),
+        service: {
+          ...(row as CartItem).service,
+          id: String((row as CartItem).service.id),
+          price:
+            typeof (row as CartItem).service.price === "number"
+              ? (row as CartItem).service.price
+              : Number((row as CartItem).service.price) || 0,
+        },
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function normalizeServiceForCart(service: Service): Service {
+  const priceNum = typeof service.price === "number" ? service.price : Number(service.price);
+  return {
+    ...service,
+    id: String(service.id ?? ""),
+    price: Number.isFinite(priceNum) ? priceNum : 0,
+  };
 }
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
@@ -159,7 +204,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<AppState>({
     isLoggedIn: !!savedUser,
     user: savedUser ? { name: savedUser.name, email: savedUser.email, phone: savedUser.phone || "" } : null,
-    cart: [],
+    cart: loadCartFromStorage(),
     wishlist: loadWishlistFromStorage(),
     orders: [],
     walletBalance: 500,
@@ -214,6 +259,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // quota / private mode
     }
   }, [state.wishlist]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.cart));
+    } catch {
+      // quota / private mode
+    }
+  }, [state.cart]);
 
   useEffect(() => {
     if (!state.isLoggedIn || !isFirebaseConfigured()) return;
@@ -297,38 +350,61 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     clearAuth();
+    try {
+      localStorage.removeItem(CART_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     setState((s) => ({
       ...s,
       isLoggedIn: false,
       user: null,
       orders: [],
+      cart: [],
     }));
   };
 
   const addToCart = (service: Service) =>
     setState((s) => {
-      const existing = s.cart.find((i) => i.service.id === service.id);
+      const normalized = normalizeServiceForCart(service);
+      const sid = normalized.id;
+      if (!sid) return s;
+      const existing = s.cart.find((i) => String(i.service.id) === sid);
       if (existing) {
-        return { ...s, cart: s.cart.map((i) => (i.service.id === service.id ? { ...i, quantity: i.quantity + 1 } : i)) };
+        return {
+          ...s,
+          cart: s.cart.map((i) => (String(i.service.id) === sid ? { ...i, quantity: i.quantity + 1 } : i)),
+        };
       }
-      return { ...s, cart: [...s.cart, { service, quantity: 1 }] };
+      return { ...s, cart: [...s.cart, { service: normalized, quantity: 1 }] };
     });
 
   const removeFromCart = (serviceId: string) =>
-    setState((s) => ({ ...s, cart: s.cart.filter((i) => i.service.id !== serviceId) }));
+    setState((s) => {
+      const sid = String(serviceId);
+      return { ...s, cart: s.cart.filter((i) => String(i.service.id) !== sid) };
+    });
 
   const updateQuantity = (serviceId: string, qty: number) =>
-    setState((s) => ({
-      ...s,
-      cart: qty <= 0 ? s.cart.filter((i) => i.service.id !== serviceId) : s.cart.map((i) => (i.service.id === serviceId ? { ...i, quantity: qty } : i)),
-    }));
+    setState((s) => {
+      const sid = String(serviceId);
+      return {
+        ...s,
+        cart:
+          qty <= 0
+            ? s.cart.filter((i) => String(i.service.id) !== sid)
+            : s.cart.map((i) => (String(i.service.id) === sid ? { ...i, quantity: qty } : i)),
+      };
+    });
 
   const clearCart = () => setState((s) => ({ ...s, cart: [] }));
 
   const toggleWishlist = (serviceId: string) =>
     setState((s) => {
-      const sid = String(serviceId);
-      const normalized = s.wishlist.map(String);
+      const sid = String(serviceId ?? "").trim();
+      // Avoid invalid IDs that trigger GET /customer/services/:id validation errors
+      if (!/^[a-f0-9]{24}$/i.test(sid)) return s;
+      const normalized = s.wishlist.map(String).filter((id) => /^[a-f0-9]{24}$/i.test(id));
       const has = normalized.includes(sid);
       return {
         ...s,

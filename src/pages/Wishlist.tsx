@@ -21,6 +21,8 @@ const Wishlist = () => {
       return;
     }
     let cancelled = false;
+    const isValidObjectId = (id: string) => /^[a-f0-9]{24}$/i.test(String(id).trim());
+
     (async () => {
       setLoading(true);
       try {
@@ -30,7 +32,9 @@ const Wishlist = () => {
             ? res.data.items.map((s) => mapApiServiceToUi(s, serviceHair))
             : [];
         const byId = new Map(fromList.map((s) => [String(s.id), s]));
-        const missing = wishlist.filter((wid) => !byId.has(String(wid)));
+        const missing = wishlist.filter(
+          (wid) => isValidObjectId(wid) && !byId.has(String(wid))
+        );
         await Promise.all(
           missing.map(async (wid) => {
             try {
@@ -39,16 +43,19 @@ const Wishlist = () => {
                 byId.set(String(wid), mapApiServiceToUi(one.data, serviceHair));
               }
             } catch {
-              // removed or inactive service
+              // removed, inactive, or network error
             }
           })
         );
         if (!cancelled) {
           const ordered = wishlist
+            .filter((wid) => isValidObjectId(wid))
             .map((wid) => byId.get(String(wid)))
             .filter((s): s is Service => s != null);
           setServices(ordered);
         }
+      } catch {
+        if (!cancelled) setServices([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -68,14 +75,14 @@ const Wishlist = () => {
       <div className="px-4">
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
-        ) : items.length === 0 ? (
+        ) : services.length === 0 ? (
           <div className="text-center py-16">
             <Heart className="w-12 h-12 text-muted mx-auto mb-3" />
             <p className="text-muted-foreground text-sm">No saved services yet</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {items.map((s) => (
+            {services.map((s) => (
               <ServiceCard key={s.id} service={s} variant="list" />
             ))}
           </div>

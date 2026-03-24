@@ -232,12 +232,14 @@ export function mapApiServiceToUi(
       ? cat.name.toLowerCase()
       : (cat || "other").toString().toLowerCase();
   const categoryId = typeof cat === "object" && cat && "_id" in cat ? cat._id : undefined;
+  const rawId = item._id != null ? String(item._id) : "";
+  const priceNum = typeof item.basePrice === "number" ? item.basePrice : Number(item.basePrice);
   return {
-    id: item._id,
+    id: rawId,
     name: item.name,
     category,
     categoryId,
-    price: item.basePrice,
+    price: Number.isFinite(priceNum) ? priceNum : 0,
     rating: 4.5,
     reviews: 0,
     duration: `${item.durationMinutes} min`,
