@@ -17,7 +17,10 @@ export interface Service {
 export interface Beautician {
   id: string;
   name: string;
+  phone?: string;
   image: string;
+  /** From API when available */
+  profileImageUrl?: string | null;
   rating: number;
   experience: string;
   servicesCompleted: number;

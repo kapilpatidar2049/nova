@@ -28,6 +28,7 @@ import Notifications from "./pages/Notifications";
 import StaticPage from "./pages/StaticPage";
 import NotFound from "./pages/NotFound";
 import RateVisit from "./pages/RateVisit";
+import BeauticianProfile from "./pages/BeauticianProfile";
 
 const queryClient = new QueryClient();
 
@@ -35,13 +36,18 @@ function MandatoryRatingRedirect() {
   const location = useLocation();
   const { isLoggedIn, pendingRatingAppointmentId } = useApp();
   if (!isLoggedIn || !pendingRatingAppointmentId) return null;
-  const m = location.pathname.match(/^\/rate\/([^/]+)/);
-  if (m) {
-    if (m[1] !== pendingRatingAppointmentId) {
+  const path = location.pathname;
+  /** Allow rating and beautician profile (order → expert tap) while pending */
+  if (path.startsWith("/rate")) {
+    const m = path.match(/^\/rate\/([^/]+)/);
+    if (m && m[1] !== pendingRatingAppointmentId) {
       return <Navigate to={`/rate/${pendingRatingAppointmentId}`} replace />;
     }
     return null;
   }
+  if (path.startsWith("/beautician/")) return null;
+  if (path.startsWith("/orders") || path.startsWith("/order/")) return null;
+
   return <Navigate to={`/rate/${pendingRatingAppointmentId}`} replace />;
 }
 
@@ -59,6 +65,7 @@ const App = () => (
               <Routes>
               <Route path="/" element={<Splash />} />
               <Route path="/rate/:id" element={<RateVisit />} />
+              <Route path="/beautician/:id" element={<BeauticianProfile />} />
               <Route path="/home" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/search" element={<SearchPage />} />

@@ -32,8 +32,12 @@ const Profile = () => {
       <div className="gradient-primary px-4 pt-12 pb-8 rounded-b-[1.5rem]">
         <h1 className="text-xl font-display font-bold text-primary-foreground mb-6">Profile</h1>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-            <User className="w-8 h-8 text-primary-foreground" />
+          <div className="w-16 h-16 rounded-full bg-primary-foreground/20 flex items-center justify-center overflow-hidden shrink-0">
+            {user?.profileImageUrl ? (
+              <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-8 h-8 text-primary-foreground" />
+            )}
           </div>
           <div>
             <h2 className="text-lg font-bold text-primary-foreground">{user?.name || "User"}</h2>

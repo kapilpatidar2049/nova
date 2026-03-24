@@ -19,11 +19,11 @@ export function clearAuth() {
   localStorage.removeItem("customer_user");
 }
 
-export function setUser(user: { id: string; name: string; email: string; phone?: string }) {
+export function setUser(user: { id: string; name: string; email: string; phone?: string; profileImageUrl?: string | null }) {
   localStorage.setItem("customer_user", JSON.stringify(user));
 }
 
-export function getUser(): { id: string; name: string; email: string; phone?: string } | null {
+export function getUser(): { id: string; name: string; email: string; phone?: string; profileImageUrl?: string | null } | null {
   const s = localStorage.getItem("customer_user");
   if (!s) return null;
   try {
@@ -46,9 +46,11 @@ async function request<T>(
   }
   const token = getToken();
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(init.headers as Record<string, string>),
   };
+  if (!(init.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(url.toString(), { ...init, headers });
@@ -114,9 +116,29 @@ export const authApi = {
       { method: "POST", body: JSON.stringify(body) }
     ),
   profile: () =>
-    request<{ name: string; email: string; phone?: string; id?: string; _id?: string; walletBalance?: number }>(
-      "/auth/profile"
-    ),
+    request<{
+      name: string;
+      email: string;
+      phone?: string;
+      id?: string;
+      _id?: string;
+      walletBalance?: number;
+      profileImage?: string;
+      profileImageUrl?: string | null;
+      rating?: number;
+      ratingCount?: number;
+    }>("/auth/profile"),
+  uploadProfileImage: (file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    return request<{
+      name: string;
+      email: string;
+      phone?: string;
+      profileImage?: string;
+      profileImageUrl?: string | null;
+    }>("/auth/profile-image", { method: "POST", body: formData });
+  },
   updateProfile: (body: { name?: string; phone?: string }) =>
     request<{ name: string; email: string; phone?: string; id?: string; _id?: string }>("/auth/update-profile", {
       method: "PUT",
@@ -237,6 +259,17 @@ export const customerApi = {
     request("/customer/payment/verify", { method: "POST", body: JSON.stringify(body) }),
   getInvoices: (page = 1, limit = 20) =>
     request<{ items: unknown[]; meta: unknown }>("/customer/invoices", { params: { page: String(page), limit: String(limit) } }),
+  getBeauticianSummary: (beauticianUserId: string) =>
+    request<{
+      id: string;
+      name: string;
+      phone: string;
+      profileImageUrl: string | null;
+      rating: number;
+      experienceYears: number;
+      expertise: string[];
+      servicesCompleted: number;
+    }>(`/customer/beauticians/${beauticianUserId}/summary`),
   getPendingRatings: () =>
     request<{
       items: Array<{

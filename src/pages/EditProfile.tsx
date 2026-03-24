@@ -1,17 +1,46 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, UserRound } from "lucide-react";
+import { ArrowLeft, Save, UserRound, Camera } from "lucide-react";
+import { toast } from "sonner";
 import { useApp } from "@/contexts/AppContext";
+import { authApi } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
 
 const EditProfile = () => {
   const navigate = useNavigate();
-  const { user, updateProfile } = useApp();
+  const { user, updateProfile, refreshProfile } = useApp();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
+  const [avatarUrl, setAvatarUrl] = useState(user?.profileImageUrl || "");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    setUploading(true);
+    try {
+      const res = await authApi.uploadProfileImage(file);
+      if (res.success && res.data?.profileImageUrl) {
+        setAvatarUrl(res.data.profileImageUrl);
+        await refreshProfile();
+        toast.success("Profile photo updated");
+      } else {
+        toast.error((res as { message?: string }).message || "Upload failed");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -45,6 +74,25 @@ const EditProfile = () => {
 
       <div className="px-4 space-y-4">
         <div className="bg-card rounded-xl p-4 shadow-card space-y-4">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-border bg-muted flex items-center justify-center">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <UserRound className="w-10 h-10 text-muted-foreground" />
+              )}
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary"
+            >
+              <Camera className="w-4 h-4" />
+              {uploading ? "Uploading…" : "Change photo"}
+            </button>
+          </div>
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <UserRound className="w-4 h-4 text-primary" />
             Account details

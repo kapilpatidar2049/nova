@@ -100,19 +100,39 @@ const OrderDetail = () => {
           <div className="bg-card rounded-xl p-4 shadow-card">
             <h2 className="font-display font-bold text-foreground mb-3">Your Expert</h2>
             <div className="flex items-center gap-3">
-              <img src={order.beautician.image} alt="" className="w-14 h-14 rounded-full object-cover" />
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-foreground">{order.beautician.name}</h3>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <Star className="w-3 h-3 fill-salon-gold text-salon-gold" />
-                  <span className="text-xs">{order.beautician.rating}</span>
-                  <span className="text-xs text-muted-foreground">• {order.beautician.experience}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/beautician/${order.beautician!.id}?appointmentId=${encodeURIComponent(order.id)}`)
+                }
+                className="flex flex-1 items-center gap-3 text-left min-w-0"
+              >
+                <img src={order.beautician.image} alt="" className="w-14 h-14 rounded-full object-cover shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-foreground">{order.beautician.name}</h3>
+                  <p className="text-[10px] text-primary font-medium mt-0.5">Tap for profile & rating</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Star className="w-3 h-3 fill-salon-gold text-salon-gold shrink-0" />
+                    <span className="text-xs">{order.beautician.rating}</span>
+                    <span className="text-xs text-muted-foreground">• {order.beautician.experience}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{order.beautician.servicesCompleted} services completed</p>
                 </div>
-                <p className="text-xs text-muted-foreground">{order.beautician.servicesCompleted} services completed</p>
-              </div>
-              <button className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center shadow-salon">
-                <Phone className="w-4 h-4 text-primary-foreground" />
               </button>
+              {order.beautician.phone ? (
+                <a
+                  href={`tel:${order.beautician.phone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center shadow-salon shrink-0"
+                  aria-label="Call beautician"
+                >
+                  <Phone className="w-4 h-4 text-primary-foreground" />
+                </a>
+              ) : (
+                <span className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0 opacity-50">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                </span>
+              )}
             </div>
           </div>
         )}

@@ -20,7 +20,7 @@ interface CartItem {
 
 interface AppState {
   isLoggedIn: boolean;
-  user: { name: string; phone: string; email: string } | null;
+  user: { name: string; phone: string; email: string; profileImageUrl?: string | null } | null;
   cart: CartItem[];
   wishlist: string[];
   orders: BookingOrder[];
@@ -97,7 +97,15 @@ function normalizePaymentModeForApi(mode: string | undefined): "online" | "cod" 
 function mapApiAppointmentToOrder(item: {
   _id: string;
   service: { _id: string; name: string; basePrice: number; durationMinutes: number };
-  beautician?: { _id: string; name: string; servicesCompleted?: number; rating?: number; experienceYears?: number };
+  beautician?: {
+    _id: string;
+    name: string;
+    phone?: string;
+    servicesCompleted?: number;
+    rating?: number;
+    experienceYears?: number;
+    profileImageUrl?: string | null;
+  };
   scheduledAt?: string | null;
   address: string;
   status: string;
@@ -152,7 +160,9 @@ function mapApiAppointmentToOrder(item: {
       ? {
           id: item.beautician._id,
           name: item.beautician.name,
-          image: "/placeholder-beautician.png",
+          phone: item.beautician.phone,
+          image: item.beautician.profileImageUrl || "/placeholder-beautician.png",
+          profileImageUrl: item.beautician.profileImageUrl,
           rating: item.beautician.rating || 4.5,
           experience: item.beautician.experienceYears ? `${item.beautician.experienceYears}+ years` : "",
           servicesCompleted: item.beautician.servicesCompleted || 0,
@@ -229,7 +239,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const savedUser = getUser();
   const [state, setState] = useState<AppState>({
     isLoggedIn: !!savedUser,
-    user: savedUser ? { name: savedUser.name, email: savedUser.email, phone: savedUser.phone || "" } : null,
+    user: savedUser
+      ? {
+          name: savedUser.name,
+          email: savedUser.email,
+          phone: savedUser.phone || "",
+          profileImageUrl: savedUser.profileImageUrl,
+        }
+      : null,
     cart: loadCartFromStorage(),
     wishlist: loadWishlistFromStorage(),
     orders: [],
@@ -288,10 +305,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           (d as { id?: string }).id ||
           String((d as { _id?: string })._id || "");
         const walletBalance = typeof d.walletBalance === "number" ? d.walletBalance : 0;
-        setUser({ id, name: d.name, email: d.email, phone: d.phone });
+        const profileImageUrl =
+          typeof d.profileImageUrl === "string" && d.profileImageUrl ? d.profileImageUrl : null;
+        setUser({ id, name: d.name, email: d.email, phone: d.phone, profileImageUrl });
         setState((s) => ({
           ...s,
-          user: { name: d.name, email: d.email, phone: d.phone || "" },
+          user: { name: d.name, email: d.email, phone: d.phone || "", profileImageUrl },
           walletBalance,
         }));
       }
@@ -310,10 +329,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           existing?.id ||
           (d as { id?: string }).id ||
           String((d as { _id?: string })._id || "");
-        setUser({ id, name: d.name, email: d.email, phone: d.phone });
+        const profileImageUrl =
+          typeof d.profileImageUrl === "string" && d.profileImageUrl ? d.profileImageUrl : null;
+        setUser({ id, name: d.name, email: d.email, phone: d.phone, profileImageUrl });
         setState((s) => ({
           ...s,
-          user: { name: d.name, email: d.email, phone: d.phone || "" },
+          user: { name: d.name, email: d.email, phone: d.phone || "", profileImageUrl },
         }));
         return { ok: true as const };
       }
@@ -450,6 +471,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       user: null,
       orders: [],
       cart: [],
+      pendingRatingAppointmentId: null,
     }));
   };
 
