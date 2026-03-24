@@ -18,6 +18,7 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import Profile from "./pages/Profile";
+import EditProfile from "./pages/EditProfile";
 import Wishlist from "./pages/Wishlist";
 import Notifications from "./pages/Notifications";
 import StaticPage from "./pages/StaticPage";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/orders" element={<Orders />} />
               <Route path="/order/:id" element={<OrderDetail />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/edit" element={<EditProfile />} />
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/privacy-policy" element={<StaticPage title="Privacy Policy" />} />

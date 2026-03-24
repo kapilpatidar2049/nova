@@ -22,7 +22,10 @@ const Payment = () => {
       total: cartTotal,
     }, { processOnlinePayment: true });
     setPaying(false);
-    if (orderId) navigate("/order-confirmation", { state: { orderId } });
+    if (orderId) {
+      const label = modes.find((m) => m.id === paymentMode)?.label;
+      navigate("/order-confirmation", { state: { orderId, paymentModeLabel: label } });
+    }
   };
 
   const modes = [

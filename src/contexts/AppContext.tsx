@@ -49,6 +49,7 @@ interface AppContextType extends AppState {
   cancelOrder: (orderId: string) => Promise<void>;
   refreshOrders: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile: (payload: { name?: string; phone?: string }) => Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Convert "10:00 AM" / "02:30 PM" to 24h "HH:MM:00" for ISO datetime. */
@@ -61,6 +62,29 @@ function timeSlotToISOTime(timeSlot: string): string {
   if (period?.toUpperCase() === "PM" && hour !== 12) hour += 12;
   if (period?.toUpperCase() === "AM" && hour === 12) hour = 0;
   return `${String(hour).padStart(2, "0")}:${min}:00`;
+}
+
+function mapPaymentModeToDisplay(mode: string | undefined): string {
+  const m = String(mode ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (m === "cod" || m === "cash_on_delivery") return "Cash on Delivery";
+  if (m === "wallet") return "Wallet";
+  if (m === "online") return "Online Payment";
+  return m ? m.replace(/_/g, " ") : "Not specified";
+}
+
+/** Accept API values or UI labels so createOrder always sends online | cod | wallet. */
+function normalizePaymentModeForApi(mode: string | undefined): "online" | "cod" | "wallet" {
+  const m = String(mode ?? "online")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (m === "cod" || m === "cash_on_delivery") return "cod";
+  if (m === "wallet") return "wallet";
+  if (m === "online" || m === "online_payment") return "online";
+  return "online";
 }
 
 function mapApiAppointmentToOrder(item: {
@@ -115,12 +139,7 @@ function mapApiAppointmentToOrder(item: {
     date: dateStr,
     timeSlot,
     address: item.address,
-    paymentMode:
-      item.paymentMode === "cod"
-        ? "Cash on Delivery"
-        : item.paymentMode === "wallet"
-          ? "Wallet"
-          : "Online Payment",
+    paymentMode: mapPaymentModeToDisplay(item.paymentMode),
     status,
     beautician: item.beautician
       ? {
@@ -134,7 +153,7 @@ function mapApiAppointmentToOrder(item: {
         }
       : undefined,
     total: item.price,
-    createdAt: item.createdAt,
+    createdAt: item.createdAt || new Date().toISOString(),
   };
 }
 
@@ -235,14 +254,43 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await authApi.profile();
       if (res.success && res.data) {
-        setUser({ id: "", name: res.data.name, email: res.data.email, phone: res.data.phone });
+        const d = res.data;
+        const existing = getUser();
+        const id =
+          existing?.id ||
+          (d as { id?: string }).id ||
+          String((d as { _id?: string })._id || "");
+        setUser({ id, name: d.name, email: d.email, phone: d.phone });
         setState((s) => ({
           ...s,
-          user: { name: res.data!.name, email: res.data!.email, phone: res.data!.phone || "" },
+          user: { name: d.name, email: d.email, phone: d.phone || "" },
         }));
       }
     } catch {
       // ignore
+    }
+  }, []);
+
+  const updateProfile = useCallback(async (payload: { name?: string; phone?: string }) => {
+    try {
+      const res = await authApi.updateProfile(payload);
+      if (res.success && res.data) {
+        const d = res.data;
+        const existing = getUser();
+        const id =
+          existing?.id ||
+          (d as { id?: string }).id ||
+          String((d as { _id?: string })._id || "");
+        setUser({ id, name: d.name, email: d.email, phone: d.phone });
+        setState((s) => ({
+          ...s,
+          user: { name: d.name, email: d.email, phone: d.phone || "" },
+        }));
+        return { ok: true as const };
+      }
+      return { ok: false as const, error: (res as { message?: string }).message || "Update failed" };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : "Update failed" };
     }
   }, []);
 
@@ -432,6 +480,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const firstService = order.services[0]?.service;
     if (!firstService) return null;
     try {
+      const paymentMode = normalizePaymentModeForApi(order.paymentMode);
       const res = await customerApi.createAppointment({
         serviceId: firstService.id,
         scheduledAt,
@@ -439,11 +488,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         lat: 19.06,
         lng: 72.83,
         price: total,
-        paymentMode: order.paymentMode?.toLowerCase() as "online" | "cod" | "wallet" | undefined,
+        paymentMode: paymentMode as "online" | "cod" | "wallet",
       });
       if (res.success && res.data) {
         const appointmentId = (res.data as { _id: string })._id;
-        if (options?.processOnlinePayment && order.paymentMode?.toLowerCase() === "online") {
+        if (options?.processOnlinePayment && paymentMode === "online") {
           const initiated = await customerApi.initiatePayment(appointmentId);
           if (initiated.success && initiated.data?.paymentId) {
             await customerApi.verifyPayment({
@@ -492,6 +541,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         cancelOrder,
         refreshOrders,
         refreshProfile,
+        updateProfile,
       }}
     >
       {children}

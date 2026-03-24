@@ -6,8 +6,10 @@ const OrderConfirmation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { orders } = useApp();
-  const orderId = (location.state as any)?.orderId;
+  const state = (location.state as { orderId?: string; paymentModeLabel?: string } | null) || {};
+  const orderId = state.orderId;
   const order = orders.find((o) => o.id === orderId);
+  const paymentLabel = state.paymentModeLabel || order?.paymentMode;
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -39,7 +41,7 @@ const OrderConfirmation = () => {
               </div>
             </div>
             <div className="border-t border-border pt-3 mt-4 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Payment: {order.paymentMode}</span>
+              <span className="text-sm text-muted-foreground">Payment: {paymentLabel}</span>
               <span className="font-bold text-foreground">₹{order.total}</span>
             </div>
             {order.beautician && (

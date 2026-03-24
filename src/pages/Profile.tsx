@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { User, Heart, MapPin, Wallet, HelpCircle, LogOut, ChevronRight, Sparkles } from "lucide-react";
+import { User, Heart, MapPin, Wallet, HelpCircle, LogOut, ChevronRight, Sparkles, UserRound } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import BottomNav from "@/components/BottomNav";
 
@@ -8,6 +8,7 @@ const Profile = () => {
   const { user, walletBalance, logout, wishlist } = useApp();
 
   const menuItems = [
+    { icon: UserRound, label: "Edit profile", action: () => navigate("/profile/edit") },
     { icon: Heart, label: "Wishlist", value: `${wishlist.length} items`, action: () => navigate("/wishlist") },
     { icon: MapPin, label: "My Addresses", action: () => navigate("/booking") },
     { icon: Wallet, label: "Wallet", value: `₹${walletBalance}`, action: () => navigate("/payment") },

@@ -114,7 +114,12 @@ export const authApi = {
       { method: "POST", body: JSON.stringify(body) }
     ),
   profile: () =>
-    request<{ name: string; email: string; phone?: string }>("/auth/profile"),
+    request<{ name: string; email: string; phone?: string; id?: string; _id?: string }>("/auth/profile"),
+  updateProfile: (body: { name?: string; phone?: string }) =>
+    request<{ name: string; email: string; phone?: string; id?: string; _id?: string }>("/auth/update-profile", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
 };
 
 // Banners & Categories (for home screen)
