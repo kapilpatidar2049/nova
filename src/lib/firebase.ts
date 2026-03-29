@@ -80,6 +80,8 @@ export function isRtdbLocationConfigured(): boolean {
 export type AppointmentLocationRtdb = {
   lat?: number;
   lng?: number;
+  beauticianId?: string;
+  appointmentId?: string;
   etaMinutes?: number | null;
   distanceKm?: number | null;
   updatedAt?: number;
