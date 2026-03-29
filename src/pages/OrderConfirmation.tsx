@@ -6,10 +6,11 @@ const OrderConfirmation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { orders } = useApp();
-  const state = (location.state as { orderId?: string; paymentModeLabel?: string } | null) || {};
+  const state = (location.state as { orderId?: string; paymentModeLabel?: string; kind?: string } | null) || {};
   const orderId = state.orderId;
   const order = orders.find((o) => o.id === orderId);
   const paymentLabel = state.paymentModeLabel || order?.paymentMode;
+  const isProduct = state.kind === "product" || order?.kind === "product";
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -17,13 +18,17 @@ const OrderConfirmation = () => {
         <div className="w-20 h-20 gradient-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-salon">
           <CheckCircle2 className="w-10 h-10 text-primary-foreground" />
         </div>
-        <h1 className="text-2xl font-display font-bold text-foreground">Booking Confirmed!</h1>
-        <p className="text-muted-foreground mt-2">Your beauty service has been booked</p>
+        <h1 className="text-2xl font-display font-bold text-foreground">
+          {isProduct ? "Order placed!" : "Booking Confirmed!"}
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          {isProduct ? "Your product order is confirmed" : "Your beauty service has been booked"}
+        </p>
 
         {order && (
           <div className="bg-card rounded-2xl p-5 shadow-card mt-8 text-left w-full max-w-sm">
             <div className="text-center mb-4">
-              <span className="text-xs text-muted-foreground">Booking ID</span>
+              <span className="text-xs text-muted-foreground">{isProduct ? "Order ID" : "Booking ID"}</span>
               <p className="text-lg font-bold text-primary">{order.id}</p>
             </div>
             <div className="space-y-3 border-t border-border pt-4">
@@ -44,7 +49,7 @@ const OrderConfirmation = () => {
               <span className="text-sm text-muted-foreground">Payment: {paymentLabel}</span>
               <span className="font-bold text-foreground">₹{order.total}</span>
             </div>
-            {order.beautician && (
+            {order.beautician && !isProduct && (
               <div className="border-t border-border pt-3 mt-3 flex items-center gap-3">
                 <img src={order.beautician.image} alt="" className="w-10 h-10 rounded-full object-cover" />
                 <div>

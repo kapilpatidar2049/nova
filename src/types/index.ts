@@ -1,3 +1,15 @@
+/** Salon retail product (vendor inventory) */
+export interface ShopProduct {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  unit?: string;
+  inStock: number;
+  vendorName?: string;
+  description?: string;
+}
+
 export interface Service {
   id: string;
   name: string;
@@ -29,6 +41,8 @@ export interface Beautician {
 
 export interface BookingOrder {
   id: string;
+  /** Service booking vs product (shop) order */
+  kind?: "service" | "product";
   services: { service: Service; quantity: number }[];
   date: string;
   timeSlot: string;
@@ -38,4 +52,7 @@ export interface BookingOrder {
   beautician?: Beautician;
   total: number;
   createdAt: string;
+  /** Product order line items when kind === "product" */
+  productLines?: { name: string; quantity: number; lineTotal: number }[];
+  vendorName?: string;
 }

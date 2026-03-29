@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
-import type { Service, BookingOrder, Beautician } from "@/types";
+import type { Service, BookingOrder, Beautician, ShopProduct } from "@/types";
 import {
   setAuthTokens,
   clearAuth,
@@ -18,10 +18,16 @@ interface CartItem {
   quantity: number;
 }
 
+interface ShopCartItem {
+  product: ShopProduct;
+  quantity: number;
+}
+
 interface AppState {
   isLoggedIn: boolean;
   user: { name: string; phone: string; email: string; profileImageUrl?: string | null } | null;
   cart: CartItem[];
+  shopCart: ShopCartItem[];
   wishlist: string[];
   orders: BookingOrder[];
   walletBalance: number;
@@ -42,6 +48,17 @@ interface AppContextType extends AppState {
   removeFromCart: (serviceId: string) => void;
   updateQuantity: (serviceId: string, qty: number) => void;
   clearCart: () => void;
+  addToShopCart: (product: ShopProduct) => void;
+  removeFromShopCart: (productId: string) => void;
+  updateShopQuantity: (productId: string, qty: number) => void;
+  clearShopCart: () => void;
+  shopCartTotal: number;
+  shopCartCount: number;
+  placeShopOrder: (
+    address: string,
+    paymentMode: string,
+    options?: { processOnlinePayment?: boolean }
+  ) => Promise<string | null>;
   toggleWishlist: (serviceId: string) => void;
   cartTotal: number;
   cartCount: number;
@@ -49,7 +66,7 @@ interface AppContextType extends AppState {
     order: Omit<BookingOrder, "id" | "createdAt">,
     options?: { processOnlinePayment?: boolean }
   ) => Promise<string | null>;
-  cancelOrder: (orderId: string) => Promise<void>;
+  cancelOrder: (orderId: string, kind?: "service" | "product") => Promise<void>;
   refreshOrders: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (payload: { name?: string; phone?: string }) => Promise<{ ok: boolean; error?: string }>;
@@ -174,10 +191,69 @@ function mapApiAppointmentToOrder(item: {
   };
 }
 
+function mapProductOrderStatus(s: string): BookingOrder["status"] {
+  const m: Record<string, BookingOrder["status"]> = {
+    pending_payment: "booked",
+    confirmed: "assigned",
+    processing: "started",
+    shipped: "on_the_way",
+    delivered: "completed",
+    cancelled: "cancelled",
+  };
+  return m[s] || "booked";
+}
+
+function mapApiProductOrderToOrder(item: {
+  _id: string;
+  items: Array<{ name: string; quantity: number; lineTotal: number; unitPrice: number }>;
+  address: string;
+  totalAmount: number;
+  status: string;
+  paymentMode?: string;
+  createdAt?: string;
+  vendor?: { name?: string };
+}): BookingOrder {
+  const created = item.createdAt ? new Date(item.createdAt) : new Date();
+  const dateStr = Number.isNaN(created.getTime())
+    ? new Date().toISOString().split("T")[0]
+    : created.toISOString().split("T")[0];
+  const placeholderService: Service = {
+    id: "shop",
+    name: item.items?.length ? `${item.items.length} product(s)` : "Products",
+    category: "shop",
+    price: item.totalAmount,
+    rating: 0,
+    reviews: 0,
+    duration: "—",
+    image: "",
+    description: "",
+    includes: [],
+  };
+  return {
+    id: item._id,
+    kind: "product",
+    services: [{ service: placeholderService, quantity: 1 }],
+    date: dateStr,
+    timeSlot: "Delivery",
+    address: item.address,
+    paymentMode: mapPaymentModeToDisplay(item.paymentMode),
+    status: mapProductOrderStatus(item.status),
+    total: item.totalAmount,
+    createdAt: item.createdAt || new Date().toISOString(),
+    productLines: item.items?.map((l) => ({
+      name: l.name,
+      quantity: l.quantity,
+      lineTotal: l.lineTotal,
+    })),
+    vendorName: item.vendor?.name,
+  };
+}
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const WISHLIST_STORAGE_KEY = "customer_wishlist";
 const CART_STORAGE_KEY = "customer_cart";
+const SHOP_CART_STORAGE_KEY = "customer_shop_cart";
 
 function loadWishlistFromStorage(): string[] {
   try {
@@ -226,6 +302,42 @@ function loadCartFromStorage(): CartItem[] {
   }
 }
 
+function loadShopCartFromStorage(): ShopCartItem[] {
+  try {
+    const raw = localStorage.getItem(SHOP_CART_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(
+        (row): row is ShopCartItem =>
+          row != null &&
+          typeof row === "object" &&
+          "product" in row &&
+          "quantity" in row &&
+          (row as ShopCartItem).product &&
+          typeof (row as ShopCartItem).quantity === "number"
+      )
+      .map((row) => ({
+        quantity: Math.max(1, (row as ShopCartItem).quantity),
+        product: {
+          ...(row as ShopCartItem).product,
+          id: String((row as ShopCartItem).product.id),
+          price:
+            typeof (row as ShopCartItem).product.price === "number"
+              ? (row as ShopCartItem).product.price
+              : Number((row as ShopCartItem).product.price) || 0,
+          inStock:
+            typeof (row as ShopCartItem).product.inStock === "number"
+              ? (row as ShopCartItem).product.inStock
+              : 0,
+        },
+      }));
+  } catch {
+    return [];
+  }
+}
+
 function normalizeServiceForCart(service: Service): Service {
   const priceNum = typeof service.price === "number" ? service.price : Number(service.price);
   return {
@@ -248,6 +360,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       : null,
     cart: loadCartFromStorage(),
+    shopCart: loadShopCartFromStorage(),
     wishlist: loadWishlistFromStorage(),
     orders: [],
     walletBalance: 0,
@@ -260,16 +373,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!getUser()) return;
     setState((s) => ({ ...s, ordersLoading: true }));
     try {
-      const res = await customerApi.getAppointments(1, 100);
-      if (res.success && res.data?.items) {
-        setState((s) => ({
-          ...s,
-          orders: res.data!.items.map(mapApiAppointmentToOrder),
-          ordersLoading: false,
-        }));
-      } else {
-        setState((s) => ({ ...s, ordersLoading: false }));
-      }
+      const [apptRes, poRes] = await Promise.all([
+        customerApi.getAppointments(1, 100),
+        customerApi.getProductOrders(1, 100),
+      ]);
+      const serviceRows =
+        apptRes.success && apptRes.data?.items ? apptRes.data.items.map(mapApiAppointmentToOrder) : [];
+      const productRows =
+        poRes.success && poRes.data?.items ? poRes.data.items.map(mapApiProductOrderToOrder) : [];
+      const merged = [...serviceRows, ...productRows].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setState((s) => ({
+        ...s,
+        orders: merged,
+        ordersLoading: false,
+      }));
     } catch {
       setState((s) => ({ ...s, ordersLoading: false }));
     }
@@ -379,6 +498,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [state.cart]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(SHOP_CART_STORAGE_KEY, JSON.stringify(state.shopCart));
+    } catch {
+      // ignore
+    }
+  }, [state.shopCart]);
+
+  useEffect(() => {
     if (!state.isLoggedIn || !isFirebaseConfigured()) return;
     getFCMToken().then((token) => {
       if (token) authApi.registerFcmToken(token).catch(() => {});
@@ -471,6 +598,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       user: null,
       orders: [],
       cart: [],
+      shopCart: [],
       pendingRatingAppointmentId: null,
     }));
   };
@@ -571,6 +699,116 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const cartTotal = state.cart.reduce((t, i) => t + i.service.price * i.quantity, 0);
   const cartCount = state.cart.reduce((t, i) => t + i.quantity, 0);
+  const shopCartTotal = state.shopCart.reduce((t, i) => t + i.product.price * i.quantity, 0);
+  const shopCartCount = state.shopCart.reduce((t, i) => t + i.quantity, 0);
+
+  const addToShopCart = (product: ShopProduct) =>
+    setState((s) => {
+      const normalized: ShopProduct = {
+        ...product,
+        id: String(product.id),
+        price: typeof product.price === "number" ? product.price : Number(product.price) || 0,
+        inStock: typeof product.inStock === "number" ? product.inStock : 0,
+      };
+      const pid = normalized.id;
+      if (!pid) return s;
+      const existing = s.shopCart.find((i) => String(i.product.id) === pid);
+      if (existing) {
+        const nextQty = existing.quantity + 1;
+        if (nextQty > normalized.inStock) return s;
+        return {
+          ...s,
+          shopCart: s.shopCart.map((i) =>
+            String(i.product.id) === pid ? { ...i, quantity: nextQty } : i
+          ),
+        };
+      }
+      return { ...s, shopCart: [...s.shopCart, { product: normalized, quantity: 1 }] };
+    });
+
+  const removeFromShopCart = (productId: string) =>
+    setState((s) => ({
+      ...s,
+      shopCart: s.shopCart.filter((i) => String(i.product.id) !== String(productId)),
+    }));
+
+  const updateShopQuantity = (productId: string, qty: number) =>
+    setState((s) => {
+      const pid = String(productId);
+      const row = s.shopCart.find((i) => String(i.product.id) === pid);
+      if (!row) return s;
+      const max = row.product.inStock;
+      const next = Math.min(max, Math.max(0, qty));
+      if (next <= 0) {
+        return { ...s, shopCart: s.shopCart.filter((i) => String(i.product.id) !== pid) };
+      }
+      return {
+        ...s,
+        shopCart: s.shopCart.map((i) =>
+          String(i.product.id) === pid ? { ...i, quantity: next } : i
+        ),
+      };
+    });
+
+  const clearShopCart = () => setState((s) => ({ ...s, shopCart: [] }));
+
+  const placeShopOrder = async (
+    address: string,
+    paymentMode: string,
+    options?: { processOnlinePayment?: boolean }
+  ): Promise<string | null> => {
+    if (!state.shopCart.length) return null;
+    const mode = normalizePaymentModeForApi(paymentMode);
+    const items = state.shopCart.map((i) => ({
+      inventoryItemId: i.product.id,
+      quantity: i.quantity,
+    }));
+    try {
+      const res = await customerApi.createProductOrder({
+        items,
+        address: address.trim(),
+        lat: 19.06,
+        lng: 72.83,
+        paymentMode: mode,
+      });
+      if (!res.success || !res.data?._id) return null;
+      const orderId = res.data._id;
+      if (options?.processOnlinePayment && mode === "online") {
+        const initiated = await customerApi.initiatePayment({ productOrderId: orderId });
+        if (!initiated.success || !initiated.data?.paymentId || !initiated.data?.orderId || !initiated.data?.keyId) {
+          await customerApi.cancelProductOrder(orderId).catch(() => {});
+          return null;
+        }
+        try {
+          const rzp = await openRazorpayCheckout({
+            keyId: initiated.data.keyId,
+            orderId: initiated.data.orderId,
+            name: state.user?.name || "Customer",
+            email: state.user?.email,
+            phone: state.user?.phone,
+            description: "Product order",
+          });
+          const verified = await customerApi.verifyPayment({
+            paymentId: initiated.data.paymentId,
+            providerPaymentId: rzp.razorpay_payment_id,
+            providerSignature: rzp.razorpay_signature,
+          });
+          if (!verified.success) throw new Error("Verification failed");
+        } catch {
+          await customerApi.cancelProductOrder(orderId).catch(() => {});
+          return null;
+        }
+      }
+      if (mode === "wallet") {
+        await refreshProfile();
+      }
+      setState((s) => ({ ...s, shopCart: [] }));
+      await refreshOrders();
+      return orderId;
+    } catch {
+      return null;
+    }
+  };
 
   const createOrder = async (
     order: Omit<BookingOrder, "id" | "createdAt">,
@@ -603,7 +841,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (res.success && res.data) {
         const appointmentId = (res.data as { _id: string })._id;
         if (options?.processOnlinePayment && paymentMode === "online") {
-          const initiated = await customerApi.initiatePayment(appointmentId);
+          const initiated = await customerApi.initiatePayment({ appointmentId });
           if (!initiated.success || !initiated.data?.paymentId || !initiated.data?.orderId || !initiated.data?.keyId) {
             await customerApi.cancelAppointment(appointmentId).catch(() => {});
             return null;
@@ -641,9 +879,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return null;
   };
 
-  const cancelOrder = async (orderId: string) => {
+  const cancelOrder = async (orderId: string, kind?: "service" | "product") => {
     try {
-      await customerApi.cancelAppointment(orderId);
+      if (kind === "product") {
+        await customerApi.cancelProductOrder(orderId);
+      } else {
+        await customerApi.cancelAppointment(orderId);
+      }
       await refreshOrders();
     } catch {
       // ignore
@@ -663,6 +905,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         removeFromCart,
         updateQuantity,
         clearCart,
+        addToShopCart,
+        removeFromShopCart,
+        updateShopQuantity,
+        clearShopCart,
+        shopCartTotal,
+        shopCartCount,
+        placeShopOrder,
         toggleWishlist,
         cartTotal,
         cartCount,

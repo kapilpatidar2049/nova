@@ -244,7 +244,7 @@ export const customerApi = {
     request<{ beauticianLocation: { coordinates: [number, number] }; eta?: { etaInMinutes?: number; distanceInKm?: number } }>(
       `/customer/track/${appointmentId}`
     ),
-  initiatePayment: (appointmentId: string) =>
+  initiatePayment: (args: { appointmentId: string } | { productOrderId: string }) =>
     request<{
       paymentId: string;
       orderId: string;
@@ -253,7 +253,7 @@ export const customerApi = {
       currency: string;
       keyId: string;
       mode: "test" | "live";
-    }>("/customer/payment/initiate", { method: "POST", body: JSON.stringify({ appointmentId }) }),
+    }>("/customer/payment/initiate", { method: "POST", body: JSON.stringify(args) }),
   initiateWalletRecharge: (amount: number) =>
     request<{
       paymentId: string;
@@ -290,6 +290,64 @@ export const customerApi = {
     }>("/customer/appointments/pending-ratings"),
   rateAppointment: (appointmentId: string, body: { stars: number; comment?: string }) =>
     request("/customer/appointments/" + appointmentId + "/rate", { method: "POST", body: JSON.stringify(body) }),
+
+  getShopProducts: (page = 1, limit = 50, search = "") =>
+    request<{
+      items: Array<{
+        _id: string;
+        name: string;
+        sku?: string;
+        quantity: number;
+        unit?: string;
+        sellingPrice?: number;
+        imageUrl?: string;
+        description?: string;
+        vendor?: { _id: string; name?: string };
+      }>;
+      meta: unknown;
+    }>("/customer/shop/products", {
+      params: { page: String(page), limit: String(limit), ...(search.trim() ? { search: search.trim() } : {}) },
+    }),
+  createProductOrder: (body: {
+    items: { inventoryItemId: string; quantity: number }[];
+    address: string;
+    lat?: number;
+    lng?: number;
+    paymentMode?: "online" | "cod" | "wallet";
+  }) =>
+    request<{
+      _id: string;
+      totalAmount: number;
+      status: string;
+      paymentMode: string;
+    }>("/customer/shop/orders", { method: "POST", body: JSON.stringify(body) }),
+  getProductOrders: (page = 1, limit = 50) =>
+    request<{
+      items: Array<{
+        _id: string;
+        items: Array<{ name: string; quantity: number; lineTotal: number; unitPrice: number }>;
+        address: string;
+        totalAmount: number;
+        status: string;
+        paymentMode: string;
+        createdAt: string;
+        vendor?: { name?: string };
+      }>;
+      meta: unknown;
+    }>("/customer/shop/orders", { params: { page: String(page), limit: String(limit) } }),
+  getProductOrderById: (id: string) =>
+    request<{
+      _id: string;
+      items: Array<{ name: string; quantity: number; lineTotal: number; unitPrice: number }>;
+      address: string;
+      totalAmount: number;
+      status: string;
+      paymentMode: string;
+      createdAt: string;
+      vendor?: { name?: string };
+    }>(`/customer/shop/orders/${id}`),
+  cancelProductOrder: (id: string) =>
+    request(`/customer/shop/orders/${id}/cancel`, { method: "PUT" }),
 };
 
 export function mapApiServiceToUi(

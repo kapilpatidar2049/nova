@@ -29,6 +29,9 @@ import StaticPage from "./pages/StaticPage";
 import NotFound from "./pages/NotFound";
 import RateVisit from "./pages/RateVisit";
 import BeauticianProfile from "./pages/BeauticianProfile";
+import Shop from "./pages/Shop";
+import ShopCart from "./pages/ShopCart";
+import ShopCheckout from "./pages/ShopCheckout";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +50,7 @@ function MandatoryRatingRedirect() {
   }
   if (path.startsWith("/beautician/")) return null;
   if (path.startsWith("/orders") || path.startsWith("/order/")) return null;
+  if (path.startsWith("/shop")) return null;
 
   return <Navigate to={`/rate/${pendingRatingAppointmentId}`} replace />;
 }
@@ -70,6 +74,9 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/service/:id" element={<ServiceDetail />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/shop/cart" element={<ShopCart />} />
+              <Route path="/shop/checkout" element={<ShopCheckout />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/booking" element={<Booking />} />
               <Route path="/payment" element={<Payment />} />

@@ -1,4 +1,4 @@
-import { Home, Search, ShoppingBag, ClipboardList, User } from "lucide-react";
+import { Home, Search, ShoppingBag, ClipboardList, User, Store } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 
@@ -9,6 +9,7 @@ const BottomNav = () => {
 
   const tabs = [
     { icon: Home, label: "Home", path: "/home" },
+    { icon: Store, label: "Shop", path: "/shop" },
     { icon: Search, label: "Search", path: "/search" },
     { icon: ShoppingBag, label: "Cart", path: "/cart", badge: cartCount },
     { icon: ClipboardList, label: "Orders", path: "/orders" },
@@ -17,6 +18,7 @@ const BottomNav = () => {
 
   const isActive = (path: string) => {
     if (path === "/home") return location.pathname === "/home";
+    if (path === "/shop") return location.pathname.startsWith("/shop");
     return location.pathname.startsWith(path);
   };
 

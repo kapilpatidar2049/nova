@@ -71,11 +71,18 @@ const Orders = () => {
             className="w-full bg-card rounded-xl p-4 shadow-card flex items-center gap-3 text-left animate-fade-in"
           >
             <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-foreground">{order.id}</span>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColors[order.status]}`}>
-                  {statusLabels[order.status]}
-                </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-bold text-foreground truncate">{order.id}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {order.kind === "product" ? (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground">Products</span>
+                  ) : (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Service</span>
+                  )}
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColors[order.status]}`}>
+                    {statusLabels[order.status]}
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">{order.date} • {order.timeSlot}</p>
               <p className="text-sm font-semibold text-foreground mt-1">₹{order.total}</p>

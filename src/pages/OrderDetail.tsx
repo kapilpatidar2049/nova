@@ -1,10 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle, Package } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import LiveTracking from "@/components/LiveTracking";
 
-const timeline = ["booked", "assigned", "on_the_way", "started", "completed"];
-const timelineLabels: Record<string, string> = {
+const serviceTimeline = ["booked", "assigned", "on_the_way", "started", "completed"];
+const serviceTimelineLabels: Record<string, string> = {
   booked: "Booked",
   assigned: "Beautician Assigned",
   on_the_way: "On the Way",
@@ -12,11 +12,24 @@ const timelineLabels: Record<string, string> = {
   completed: "Completed",
 };
 
+const productTimeline = ["booked", "assigned", "started", "on_the_way", "completed"];
+const productTimelineLabels: Record<string, string> = {
+  booked: "Payment / Placed",
+  assigned: "Confirmed",
+  started: "Processing",
+  on_the_way: "Shipped",
+  completed: "Delivered",
+};
+
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { orders, cancelOrder, ordersLoading } = useApp();
   const order = orders.find((o) => o.id === id);
+  const isProduct = order?.kind === "product";
+
+  const timeline = isProduct ? productTimeline : serviceTimeline;
+  const timelineLabels = isProduct ? productTimelineLabels : serviceTimelineLabels;
 
   if (ordersLoading && !order) return <div className="min-h-screen flex items-center justify-center text-foreground">Loading...</div>;
   if (!order) return <div className="min-h-screen flex items-center justify-center text-foreground">Order not found</div>;
@@ -29,20 +42,25 @@ const OrderDetail = () => {
         <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-card shadow-card flex items-center justify-center">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <h1 className="text-xl font-display font-bold text-foreground">Order Details</h1>
+        <h1 className="text-xl font-display font-bold text-foreground">
+          {isProduct ? "Product order" : "Order Details"}
+        </h1>
       </div>
 
       <div className="px-4 space-y-4">
-        {/* Order ID */}
         <div className="bg-card rounded-xl p-4 shadow-card text-center">
-          <span className="text-xs text-muted-foreground">Order ID</span>
+          <span className="text-xs text-muted-foreground">{isProduct ? "Order ID" : "Order ID"}</span>
           <p className="text-lg font-bold text-primary">{order.id}</p>
+          {isProduct && order.vendorName ? (
+            <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
+              <Package className="w-3 h-3" /> {order.vendorName}
+            </p>
+          ) : null}
         </div>
 
-        {/* Timeline */}
         {order.status !== "cancelled" && (
           <div className="bg-card rounded-xl p-5 shadow-card">
-            <h2 className="font-display font-bold text-foreground mb-4">Order Status</h2>
+            <h2 className="font-display font-bold text-foreground mb-4">Status</h2>
             <div className="space-y-0">
               {timeline.map((step, i) => (
                 <div key={step} className="flex gap-3">
@@ -69,7 +87,7 @@ const OrderDetail = () => {
           </div>
         )}
 
-        {(order.status === "on_the_way" || order.status === "assigned" || order.status === "started") && (
+        {!isProduct && (order.status === "on_the_way" || order.status === "assigned" || order.status === "started") && (
           <LiveTracking beautician={order.beautician} appointmentId={order.id} />
         )}
 
@@ -79,7 +97,6 @@ const OrderDetail = () => {
           </div>
         )}
 
-        {/* Details */}
         <div className="bg-card rounded-xl p-4 shadow-card space-y-3">
           <div className="flex items-center gap-3">
             <MapPin className="w-4 h-4 text-primary shrink-0" />
@@ -95,8 +112,23 @@ const OrderDetail = () => {
           </div>
         </div>
 
-        {/* Beautician */}
-        {order.beautician && (
+        {isProduct && order.productLines && order.productLines.length > 0 && (
+          <div className="bg-card rounded-xl p-4 shadow-card">
+            <h2 className="font-display font-bold text-foreground mb-3">Items</h2>
+            <ul className="space-y-2">
+              {order.productLines.map((line, idx) => (
+                <li key={`${line.name}-${idx}`} className="flex justify-between text-sm">
+                  <span className="text-foreground">
+                    {line.name} ×{line.quantity}
+                  </span>
+                  <span className="font-medium">₹{line.lineTotal}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {!isProduct && order.beautician && (
           <div className="bg-card rounded-xl p-4 shadow-card">
             <h2 className="font-display font-bold text-foreground mb-3">Your Expert</h2>
             <div className="flex items-center gap-3">
@@ -137,10 +169,12 @@ const OrderDetail = () => {
           </div>
         )}
 
-        {/* Cancel */}
         {!["completed", "cancelled"].includes(order.status) && (
           <button
-            onClick={async () => { await cancelOrder(order.id); navigate("/orders"); }}
+            onClick={async () => {
+              await cancelOrder(order.id, isProduct ? "product" : "service");
+              navigate("/orders");
+            }}
             className="w-full border-2 border-destructive text-destructive py-3 rounded-xl font-semibold"
           >
             Cancel Order
