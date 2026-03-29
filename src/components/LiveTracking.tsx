@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Navigation, Clock, Phone } from "lucide-react";
 import type { Beautician } from "@/types";
 import { customerApi } from "@/lib/api";
+import { isRtdbLocationConfigured, subscribeAppointmentLocation } from "@/lib/firebase";
 import { createTrackingSocket, type LocationUpdate } from "@/lib/socket";
 
 interface LiveTrackingProps {
@@ -31,8 +32,20 @@ const LiveTracking = ({ beautician, appointmentId }: LiveTrackingProps) => {
     return () => { cancelled = true; };
   }, [appointmentId]);
 
+  const useFirebaseRtdb = isRtdbLocationConfigured();
+
   useEffect(() => {
-    if (!appointmentId) return;
+    if (!appointmentId || !useFirebaseRtdb) return;
+    const unsub = subscribeAppointmentLocation(appointmentId, (data) => {
+      if (!data) return;
+      if (typeof data.etaMinutes === "number" && !Number.isNaN(data.etaMinutes)) setEta(data.etaMinutes);
+      if (typeof data.distanceKm === "number" && !Number.isNaN(data.distanceKm)) setDistance(data.distanceKm);
+    });
+    return unsub;
+  }, [appointmentId, useFirebaseRtdb]);
+
+  useEffect(() => {
+    if (!appointmentId || useFirebaseRtdb) return;
     const socket = createTrackingSocket();
     socketRef.current = socket;
 
@@ -55,7 +68,7 @@ const LiveTracking = ({ beautician, appointmentId }: LiveTrackingProps) => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [appointmentId]);
+  }, [appointmentId, useFirebaseRtdb]);
 
   return (
     <div className="bg-card rounded-xl shadow-card overflow-hidden">

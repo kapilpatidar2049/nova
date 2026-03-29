@@ -598,6 +598,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         lng: 72.83,
         price: total,
         paymentMode: paymentMode as "online" | "cod" | "wallet",
+        ...(order.beautician?.id ? { beauticianUserId: order.beautician.id } : {}),
       });
       if (res.success && res.data) {
         const appointmentId = (res.data as { _id: string })._id;

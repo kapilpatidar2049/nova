@@ -227,8 +227,17 @@ export const customerApi = {
       paymentMode?: string;
       createdAt: string;
     }>(`/customer/appointments/${id}`),
-  createAppointment: (body: { serviceId: string; scheduledAt: string; address: string; lat: number; lng: number; price: number; paymentMode?: "online" | "cod" | "wallet" }) =>
-    request<{ _id: string }>("/customer/appointments", { method: "POST", body: JSON.stringify(body) }),
+  createAppointment: (body: {
+    serviceId: string;
+    scheduledAt: string;
+    address: string;
+    lat: number;
+    lng: number;
+    price: number;
+    paymentMode?: "online" | "cod" | "wallet";
+    /** Beautician User id — assign + notify this expert when chosen */
+    beauticianUserId?: string;
+  }) => request<{ _id: string }>("/customer/appointments", { method: "POST", body: JSON.stringify(body) }),
   cancelAppointment: (id: string) =>
     request(`/customer/appointments/${id}/cancel`, { method: "PUT" }),
   track: (appointmentId: string) =>

@@ -1,5 +1,8 @@
 import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue } from "firebase/database";
 import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
+
+const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL as string | undefined;
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -8,6 +11,7 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  ...(dbUrl ? { databaseURL: dbUrl } : {}),
 };
 
 let app: ReturnType<typeof initializeApp> | null = null;
@@ -66,6 +70,42 @@ export async function getFCMToken(): Promise<string | null> {
 
 export function isFirebaseConfigured(): boolean {
   return !!(firebaseConfig.projectId && firebaseConfig.apiKey);
+}
+
+/** Realtime Database URL set — LiveTracking can subscribe to `location/{appointmentId}` (backend writes via Admin SDK). */
+export function isRtdbLocationConfigured(): boolean {
+  return !!(dbUrl && firebaseConfig.projectId && firebaseConfig.apiKey);
+}
+
+export type AppointmentLocationRtdb = {
+  lat?: number;
+  lng?: number;
+  etaMinutes?: number | null;
+  distanceKm?: number | null;
+  updatedAt?: number;
+};
+
+/**
+ * Live updates when beautician sends location (backend writes to RTDB).
+ * Deploy RTDB rules so clients may read `location/*` (see firebase-database.rules.json).
+ */
+export function subscribeAppointmentLocation(
+  appointmentId: string,
+  callback: (data: AppointmentLocationRtdb | null) => void
+): () => void {
+  if (!isRtdbLocationConfigured() || !appointmentId) return () => {};
+  const firebaseApp = getFirebaseApp();
+  if (!firebaseApp) return () => {};
+  try {
+    const db = getDatabase(firebaseApp);
+    const locationRef = ref(db, `location/${appointmentId}`);
+    return onValue(locationRef, (snapshot) => {
+      callback((snapshot.exists() ? snapshot.val() : null) as AppointmentLocationRtdb | null);
+    });
+  } catch (e) {
+    console.warn("[RTDB] subscribeAppointmentLocation failed:", e);
+    return () => {};
+  }
 }
 
 export function onFCMMessage(

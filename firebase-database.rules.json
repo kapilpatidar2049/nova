@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "location": {
+      "$appointmentId": {
+        ".read": true,
+        ".write": false
+      }
+    }
+  }
+}
