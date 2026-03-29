@@ -110,7 +110,14 @@ export const authApi = {
       needsSignup?: boolean;
       phone?: string;
     }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ phone, otp, role: "customer" }) }),
-  register: (body: { name: string; email: string; password: string; phone?: string; cityId?: string }) =>
+  register: (body: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    cityId?: string;
+    referralCode?: string;
+  }) =>
     request<{ user: { id: string; name: string; email: string; role: string }; tokens: { accessToken: string; refreshToken: string } }>(
       "/auth/register",
       { method: "POST", body: JSON.stringify(body) }
@@ -348,6 +355,14 @@ export const customerApi = {
     }>(`/customer/shop/orders/${id}`),
   cancelProductOrder: (id: string) =>
     request(`/customer/shop/orders/${id}/cancel`, { method: "PUT" }),
+  getReferral: () =>
+    request<{
+      referralCode: string | null;
+      isEnabled: boolean;
+      customerRewardAmount: number;
+      beauticianRewardAmount: number;
+      shareMessage: string;
+    }>("/customer/referral"),
 };
 
 export function mapApiServiceToUi(

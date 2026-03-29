@@ -39,7 +39,13 @@ interface AppState {
 
 interface AppContextType extends AppState {
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  register: (body: { name: string; email: string; password: string; phone?: string }) => Promise<{ ok: boolean; error?: string }>;
+  register: (body: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    referralCode?: string;
+  }) => Promise<{ ok: boolean; error?: string }>;
   sendOtp: (phone: string, fcmToken?: string | null) => Promise<{ ok: boolean; error?: string }>;
   loginWithOtp: (phone: string, otp: string) => Promise<{ ok: boolean; error?: string }>;
   loginWithPhone?: (phone: string, name?: string) => void;
@@ -532,7 +538,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (body: { name: string; email: string; password: string; phone?: string }) => {
+  const register = async (body: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    referralCode?: string;
+  }) => {
     try {
       const res = await authApi.register(body);
       if (res.success && res.data?.user && res.data?.tokens) {

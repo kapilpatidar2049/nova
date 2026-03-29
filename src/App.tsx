@@ -20,6 +20,7 @@ import OrderDetail from "./pages/OrderDetail";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import WalletPage from "./pages/WalletPage";
+import Referral from "./pages/Referral";
 import MyAddresses from "./pages/MyAddresses";
 import ChangePassword from "./pages/ChangePassword";
 import DeleteAccount from "./pages/DeleteAccount";
@@ -51,6 +52,7 @@ function MandatoryRatingRedirect() {
   if (path.startsWith("/beautician/")) return null;
   if (path.startsWith("/orders") || path.startsWith("/order/")) return null;
   if (path.startsWith("/shop")) return null;
+  if (path.startsWith("/profile/referral")) return null;
 
   return <Navigate to={`/rate/${pendingRatingAppointmentId}`} replace />;
 }
@@ -88,6 +90,7 @@ const App = () => (
               <Route path="/profile/change-password" element={<ChangePassword />} />
               <Route path="/profile/delete-account" element={<DeleteAccount />} />
               <Route path="/wallet" element={<WalletPage />} />
+              <Route path="/profile/referral" element={<Referral />} />
               <Route path="/addresses" element={<MyAddresses />} />
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/notifications" element={<Notifications />} />

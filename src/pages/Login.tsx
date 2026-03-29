@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
-import { Sparkles, Mail, Lock, ArrowRight, Phone, User } from "lucide-react";
+import { Sparkles, Mail, Lock, ArrowRight, Phone, User, Gift } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { getFCMToken, onFCMMessage } from "@/lib/firebase";
 
 const Login = () => {
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<"phone" | "email" | "signup">("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -24,6 +25,15 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
   const [otpVerifiedForSignup, setOtpVerifiedForSignup] = useState(false);
+  const [signupReferralCode, setSignupReferralCode] = useState("");
+
+  useEffect(() => {
+    const ref = searchParams.get("ref") || sessionStorage.getItem("referralCode") || "";
+    if (ref) {
+      setSignupReferralCode(ref);
+      sessionStorage.setItem("referralCode", ref);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!otpSent) return;
@@ -122,11 +132,13 @@ const Login = () => {
     }
     setError("");
     setLoading(true);
+    const ref = signupReferralCode.replace(/\s/g, "").trim();
     const result = await register({
       name: trimmedName,
       email: trimmedEmail,
       password: signupPassword,
       phone: signupPhone.replace(/\D/g, "").trim() || undefined,
+      ...(ref ? { referralCode: ref } : {}),
     });
     setLoading(false);
     if (result.ok) {
@@ -316,6 +328,17 @@ const Login = () => {
                 onChange={(e) => setSignupPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 placeholder="Phone (optional)"
                 className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+              <Gift className="w-5 h-5 text-muted-foreground shrink-0" />
+              <input
+                type="text"
+                value={signupReferralCode}
+                onChange={(e) => setSignupReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16))}
+                placeholder="Referral code (optional)"
+                className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+                autoCapitalize="characters"
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
