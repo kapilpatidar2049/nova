@@ -1,15 +1,14 @@
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
+/** No ThemeProvider required (Vite app). Use system so toasts match OS light/dark. */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
-      className="toaster group"
+      theme="system"
+      position="top-center"
+      className="toaster group !z-[300]"
       toastOptions={{
         classNames: {
           toast:

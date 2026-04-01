@@ -219,6 +219,7 @@ export const customerApi = {
         price: number;
         paymentMode?: string;
         createdAt: string;
+        serviceStartOtp?: string | null;
       }>;
       meta: unknown;
     }>("/customer/appointments", { params: { page: String(page), limit: String(limit), ...(status.trim() ? { status: status.trim() } : {}) } }),
@@ -233,6 +234,8 @@ export const customerApi = {
       price: number;
       paymentMode?: string;
       createdAt: string;
+      serviceStartOtp?: string | null;
+      serviceStartOtpExpiresAt?: string | null;
     }>(`/customer/appointments/${id}`),
   createAppointment: (body: {
     serviceId: string;

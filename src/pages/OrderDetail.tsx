@@ -1,13 +1,17 @@
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle, Package } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle, Package, KeyRound } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
+import { customerApi } from "@/lib/api";
+import { formatDurationMs } from "@/lib/bookingTime";
 import LiveTracking from "@/components/LiveTracking";
 
-const serviceTimeline = ["booked", "assigned", "on_the_way", "started", "completed"];
+const serviceTimeline = ["booked", "assigned", "on_the_way", "reached", "started", "completed"];
 const serviceTimelineLabels: Record<string, string> = {
   booked: "Booked",
   assigned: "Beautician Assigned",
   on_the_way: "On the Way",
+  reached: "Expert Arrived",
   started: "Service Started",
   completed: "Completed",
 };
@@ -24,12 +28,46 @@ const productTimelineLabels: Record<string, string> = {
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { orders, cancelOrder, ordersLoading } = useApp();
+  const { orders, cancelOrder, ordersLoading, refreshOrders } = useApp();
   const order = orders.find((o) => o.id === id);
   const isProduct = order?.kind === "product";
+  const [serviceOtp, setServiceOtp] = useState<string | null>(null);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<string | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   const timeline = isProduct ? productTimeline : serviceTimeline;
   const timelineLabels = isProduct ? productTimelineLabels : serviceTimelineLabels;
+
+  useEffect(() => {
+    if (id) void refreshOrders();
+  }, [id, refreshOrders]);
+
+  useEffect(() => {
+    if (isProduct || !id || !order || order.kind === "product") return;
+    let cancelled = false;
+    const load = () => {
+      customerApi
+        .getAppointmentById(id)
+        .then((res) => {
+          if (cancelled || !res.success || !res.data) return;
+          setServiceOtp(res.data.serviceStartOtp ?? null);
+          setOtpExpiresAt(res.data.serviceStartOtpExpiresAt ?? null);
+        })
+        .catch(() => {});
+    };
+    load();
+    const t = window.setInterval(load, 12_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(t);
+    };
+  }, [isProduct, id, order?.id, order?.kind]);
+
+  useEffect(() => {
+    if (isProduct) return;
+    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [isProduct]);
 
   if (ordersLoading && !order) return <div className="min-h-screen flex items-center justify-center text-foreground">Loading...</div>;
   if (!order) return <div className="min-h-screen flex items-center justify-center text-foreground">Order not found</div>;
@@ -87,8 +125,44 @@ const OrderDetail = () => {
           </div>
         )}
 
-        {!isProduct && (order.status === "on_the_way" || order.status === "assigned" || order.status === "started") && (
+        {!isProduct && order.status === "on_the_way" && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            Your expert is on the way. Live location appears below when available.
+          </div>
+        )}
+
+        {!isProduct && (order.status === "on_the_way" || order.status === "assigned" || order.status === "reached" || order.status === "started") && (
           <LiveTracking beautician={order.beautician} appointmentId={order.id} />
+        )}
+
+        {!isProduct && order.status === "reached" && (
+          <div className="bg-card rounded-xl p-5 shadow-card border-2 border-primary/40">
+            <h2 className="font-display font-bold text-foreground flex items-center gap-2 mb-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              Service code
+            </h2>
+            {serviceOtp ? (
+              <>
+                <p className="text-4xl font-mono tracking-[0.35em] text-center text-primary font-bold py-2">{serviceOtp}</p>
+                {otpExpiresAt ? (
+                  <p className="text-center text-sm font-semibold text-amber-700 dark:text-amber-400 tabular-nums">
+                    Code expires in:{" "}
+                    {(() => {
+                      const ms = new Date(otpExpiresAt).getTime() - nowTick;
+                      return ms <= 0 ? "expired — ask expert to mark arrival again" : formatDurationMs(ms, true);
+                    })()}
+                  </p>
+                ) : null}
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Tell this code to your beautician only. They will enter it in their app to start the service.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Your code will appear here as soon as your expert marks arrival. This page refreshes automatically.
+              </p>
+            )}
+          </div>
         )}
 
         {order.status === "cancelled" && (
@@ -104,11 +178,15 @@ const OrderDetail = () => {
           </div>
           <div className="flex items-center gap-3">
             <Clock className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-sm text-foreground">{order.date} • {order.timeSlot}</span>
+            <span className="text-sm text-foreground">
+              {order.date} • {order.timeSlot}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <CreditCard className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-sm text-foreground">{order.paymentMode} • ₹{order.total}</span>
+            <span className="text-sm text-foreground">
+              {order.paymentMode} • ₹{order.total}
+            </span>
           </div>
         </div>
 
@@ -134,9 +212,7 @@ const OrderDetail = () => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() =>
-                  navigate(`/beautician/${order.beautician!.id}?appointmentId=${encodeURIComponent(order.id)}`)
-                }
+                onClick={() => navigate(`/beautician/${order.beautician!.id}?appointmentId=${encodeURIComponent(order.id)}`)}
                 className="flex flex-1 items-center gap-3 text-left min-w-0"
               >
                 <img src={order.beautician.image} alt="" className="w-14 h-14 rounded-full object-cover shrink-0" />
@@ -169,7 +245,7 @@ const OrderDetail = () => {
           </div>
         )}
 
-        {!["completed", "cancelled"].includes(order.status) && (
+        {!["completed", "cancelled", "started"].includes(order.status) && (
           <button
             onClick={async () => {
               await cancelOrder(order.id, isProduct ? "product" : "service");

@@ -48,7 +48,9 @@ export interface BookingOrder {
   timeSlot: string;
   address: string;
   paymentMode: string;
-  status: "booked" | "assigned" | "on_the_way" | "started" | "completed" | "cancelled";
+  status: "booked" | "assigned" | "on_the_way" | "reached" | "started" | "completed" | "cancelled";
+  /** Shown when beautician has arrived and backend status is `reached` */
+  serviceStartOtp?: string | null;
   beautician?: Beautician;
   total: number;
   createdAt: string;

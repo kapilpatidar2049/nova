@@ -65,7 +65,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <HashRouter>
-            <div className="max-w-lg mx-auto min-h-screen bg-background relative">
+            <div className="w-full min-h-screen bg-background relative max-w-lg mx-auto md:max-w-none md:mx-0 md:px-8 lg:px-12 xl:px-16">
               <MandatoryRatingRedirect />
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
               <Routes>

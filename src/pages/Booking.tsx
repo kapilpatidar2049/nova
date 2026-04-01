@@ -48,7 +48,7 @@ const Booking = () => {
 
   return (
     <div className="min-h-screen bg-background pb-28">
-      <div className="px-4 pt-12 pb-4 flex items-center gap-3">
+      <div className="px-4 md:px-0 pt-12 pb-4 flex items-center gap-3">
         <button onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)} className="w-9 h-9 rounded-full bg-card shadow-card flex items-center justify-center">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
@@ -56,7 +56,7 @@ const Booking = () => {
       </div>
 
       {/* Steps indicator */}
-      <div className="px-4 mb-6">
+      <div className="px-4 md:px-0 mb-6">
         <div className="flex items-center gap-2">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2 flex-1">
@@ -76,7 +76,7 @@ const Booking = () => {
         </div>
       </div>
 
-      <div className="px-4">
+      <div className="px-4 md:px-0">
         {step === 1 && (
           <div className="space-y-4 animate-fade-in">
             <h2 className="font-display font-bold text-foreground">Service Address</h2>
@@ -116,7 +116,7 @@ const Booking = () => {
             </div>
             <div>
               <h2 className="font-display font-bold text-foreground flex items-center gap-2"><Clock className="w-5 h-5 text-primary" /> Select Time</h2>
-              <div className="grid grid-cols-3 gap-2 mt-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mt-3">
                 {timeSlots.map((t) => (
                   <button
                     key={t}
@@ -144,18 +144,20 @@ const Booking = () => {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">Total</span>
-          <span className="text-lg font-bold text-foreground">₹{cartTotal}</span>
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+        <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground">Total</span>
+            <span className="text-lg font-bold text-foreground">₹{cartTotal}</span>
+          </div>
+          <button
+            onClick={handleNext}
+            disabled={!canProceed()}
+            className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50 md:text-lg md:py-4"
+          >
+            {step < 3 ? "Continue" : "Proceed to Payment"}
+          </button>
         </div>
-        <button
-          onClick={handleNext}
-          disabled={!canProceed()}
-          className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50"
-        >
-          {step < 3 ? "Continue" : "Proceed to Payment"}
-        </button>
       </div>
     </div>
   );

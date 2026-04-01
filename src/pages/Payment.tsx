@@ -36,16 +36,16 @@ const Payment = () => {
 
   return (
     <div className="min-h-screen bg-background pb-28">
-      <div className="px-4 pt-12 pb-4 flex items-center gap-3">
+      <div className="px-4 md:px-0 pt-12 pb-4 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-card shadow-card flex items-center justify-center">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
         <h1 className="text-xl font-display font-bold text-foreground">Payment</h1>
       </div>
 
-      <div className="px-4 space-y-4">
+      <div className="px-4 md:px-0 space-y-6 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
         {/* Order Summary */}
-        <div className="bg-card rounded-xl p-4 shadow-card">
+        <div className="bg-card rounded-xl p-4 shadow-card lg:col-span-5 xl:col-span-4">
           <h2 className="font-display font-bold text-foreground mb-3">Order Summary</h2>
           {cart.map(({ service, quantity }) => (
             <div key={service.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
@@ -63,8 +63,9 @@ const Payment = () => {
         </div>
 
         {/* Payment Methods */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-3">
         <h2 className="font-display font-bold text-foreground">Payment Method</h2>
-        <div className="space-y-3">
+        <div className="space-y-3 md:grid md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3 md:gap-4 md:space-y-0 lg:space-y-3 xl:space-y-0 xl:gap-4">
           {modes.map((m) => (
             <button
               key={m.id}
@@ -85,12 +86,15 @@ const Payment = () => {
             </button>
           ))}
         </div>
+        </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
-        <button onClick={handlePay} disabled={paying} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50">
-          {paying ? "Booking..." : paymentMode === "cod" ? `Confirm COD ₹${cartTotal}` : `Pay ₹${cartTotal}`}
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+        <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
+          <button onClick={handlePay} disabled={paying} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50 md:text-lg md:py-4">
+            {paying ? "Booking..." : paymentMode === "cod" ? `Confirm COD ₹${cartTotal}` : `Pay ₹${cartTotal}`}
+          </button>
+        </div>
       </div>
     </div>
   );

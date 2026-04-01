@@ -10,6 +10,8 @@ import {
 } from "@/lib/api";
 import { openRazorpayCheckout } from "@/lib/razorpay";
 import { getFCMToken, isFirebaseConfigured } from "@/lib/firebase";
+import { toast } from "sonner";
+import { timeSlotToISOTime } from "@/lib/bookingTime";
 
 const DEFAULT_IMG = "";
 
@@ -82,18 +84,6 @@ interface AppContextType extends AppState {
   refreshPendingRatings: () => Promise<void>;
 }
 
-/** Convert "10:00 AM" / "02:30 PM" to 24h "HH:MM:00" for ISO datetime. */
-function timeSlotToISOTime(timeSlot: string): string {
-  const match = timeSlot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-  if (!match) return "10:00:00";
-  let [, h, m, period] = match;
-  let hour = parseInt(h!, 10);
-  const min = m!;
-  if (period?.toUpperCase() === "PM" && hour !== 12) hour += 12;
-  if (period?.toUpperCase() === "AM" && hour === 12) hour = 0;
-  return `${String(hour).padStart(2, "0")}:${min}:00`;
-}
-
 function mapPaymentModeToDisplay(mode: string | undefined): string {
   const m = String(mode ?? "")
     .trim()
@@ -135,10 +125,13 @@ function mapApiAppointmentToOrder(item: {
   price: number;
   paymentMode?: string;
   createdAt?: string;
+  serviceStartOtp?: string | null;
 }): BookingOrder {
   const statusMap: Record<string, BookingOrder["status"]> = {
     pending: "booked",
     accepted: "assigned",
+    in_transit: "on_the_way",
+    reached: "reached",
     in_progress: "started",
     completed: "completed",
     cancelled: "cancelled",
@@ -150,7 +143,11 @@ function mapApiAppointmentToOrder(item: {
     const d = item.scheduledAt ? new Date(item.scheduledAt) : new Date();
     if (!Number.isNaN(d.getTime())) {
       timeSlot = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-      dateStr = d.toISOString().split("T")[0];
+      // Local calendar date must match local timeSlot — UTC ISO date breaks countdown parsing.
+      const y = d.getFullYear();
+      const mo = d.getMonth() + 1;
+      const day = d.getDate();
+      dateStr = `${y}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     }
   } catch {
     // keep defaults on any date error
@@ -194,6 +191,10 @@ function mapApiAppointmentToOrder(item: {
       : undefined,
     total: item.price,
     createdAt: item.createdAt || new Date().toISOString(),
+    serviceStartOtp:
+      status === "reached" && "serviceStartOtp" in item && item.serviceStartOtp
+        ? String(item.serviceStartOtp)
+        : undefined,
   };
 }
 
@@ -661,11 +662,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     [state.user, refreshProfile]
   );
 
-  const addToCart = (service: Service) =>
+  const addToCart = (service: Service) => {
+    const normalized = normalizeServiceForCart(service);
+    const sid = normalized.id;
+    if (!sid) {
+      toast.error("Could not add this service");
+      return;
+    }
+    const label = (normalized.name || "Service").trim() || "Service";
+    const wasInCart = state.cart.some((i) => String(i.service.id) === sid);
     setState((s) => {
-      const normalized = normalizeServiceForCart(service);
-      const sid = normalized.id;
-      if (!sid) return s;
       const existing = s.cart.find((i) => String(i.service.id) === sid);
       if (existing) {
         return {
@@ -675,6 +681,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       return { ...s, cart: [...s.cart, { service: normalized, quantity: 1 }] };
     });
+    toast.success(wasInCart ? `Quantity updated · ${label}` : `Added to cart · ${label}`);
+  };
 
   const removeFromCart = (serviceId: string) =>
     setState((s) => {
@@ -714,16 +722,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const shopCartTotal = state.shopCart.reduce((t, i) => t + i.product.price * i.quantity, 0);
   const shopCartCount = state.shopCart.reduce((t, i) => t + i.quantity, 0);
 
-  const addToShopCart = (product: ShopProduct) =>
+  const addToShopCart = (product: ShopProduct) => {
+    const normalized: ShopProduct = {
+      ...product,
+      id: String(product.id),
+      price: typeof product.price === "number" ? product.price : Number(product.price) || 0,
+      inStock: typeof product.inStock === "number" ? product.inStock : 0,
+    };
+    const pid = normalized.id;
+    if (!pid) {
+      toast.error("Could not add this product");
+      return;
+    }
+    const name = (normalized.name || "Product").trim() || "Product";
+    const existingRow = state.shopCart.find((i) => String(i.product.id) === pid);
+    if (existingRow && existingRow.quantity + 1 > normalized.inStock) {
+      toast.error("No more stock available");
+      return;
+    }
+    const wasInCart = !!existingRow;
     setState((s) => {
-      const normalized: ShopProduct = {
-        ...product,
-        id: String(product.id),
-        price: typeof product.price === "number" ? product.price : Number(product.price) || 0,
-        inStock: typeof product.inStock === "number" ? product.inStock : 0,
-      };
-      const pid = normalized.id;
-      if (!pid) return s;
       const existing = s.shopCart.find((i) => String(i.product.id) === pid);
       if (existing) {
         const nextQty = existing.quantity + 1;
@@ -737,6 +755,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       return { ...s, shopCart: [...s.shopCart, { product: normalized, quantity: 1 }] };
     });
+    toast.success(wasInCart ? `Quantity updated · ${name}` : `Added to cart · ${name}`);
+  };
 
   const removeFromShopCart = (productId: string) =>
     setState((s) => ({

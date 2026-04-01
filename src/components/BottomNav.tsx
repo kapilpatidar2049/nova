@@ -24,7 +24,7 @@ const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-salon">
-      <div className="max-w-lg mx-auto flex items-center justify-around py-2">
+      <div className="w-full max-w-lg mx-auto md:max-w-none flex items-center justify-around md:justify-center md:gap-6 lg:gap-10 xl:gap-14 py-2 px-2 md:px-8 lg:px-12 xl:px-16">
         {tabs.map((tab) => (
           <button
             key={tab.label}

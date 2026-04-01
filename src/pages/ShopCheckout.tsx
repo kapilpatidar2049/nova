@@ -106,14 +106,16 @@ const ShopCheckout = () => {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50 max-w-lg mx-auto">
-        <button
-          onClick={handlePay}
-          disabled={paying || address.trim().length < 5}
-          className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50"
-        >
-          {paying ? "Placing order…" : paymentMode === "cod" ? `Place order ₹${shopCartTotal}` : `Pay ₹${shopCartTotal}`}
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
+        <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
+          <button
+            onClick={handlePay}
+            disabled={paying || address.trim().length < 5}
+            className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50 md:text-lg md:py-4"
+          >
+            {paying ? "Placing order…" : paymentMode === "cod" ? `Place order ₹${shopCartTotal}` : `Pay ₹${shopCartTotal}`}
+          </button>
+        </div>
       </div>
     </div>
   );

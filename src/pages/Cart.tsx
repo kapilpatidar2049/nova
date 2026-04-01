@@ -23,16 +23,16 @@ const Cart = () => {
 
   return (
     <div className="min-h-screen bg-background pb-36">
-      <div className="px-4 pt-12 pb-4 flex items-center gap-3">
+      <div className="px-4 md:px-0 pt-12 pb-4 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-card shadow-card flex items-center justify-center">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
         <h1 className="text-xl font-display font-bold text-foreground">My Cart</h1>
       </div>
 
-      <div className="px-4 space-y-3">
+      <div className="px-4 md:px-0 space-y-3 md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-4 md:space-y-0">
         {cart.map(({ service, quantity }) => (
-          <div key={service.id} className="bg-card rounded-xl p-4 shadow-card flex gap-3 animate-fade-in">
+          <div key={service.id} className="bg-card rounded-xl p-4 shadow-card flex gap-3 animate-fade-in md:flex-col md:min-h-0">
             <img src={service.image} alt={service.name} className="w-20 h-20 rounded-lg object-cover" />
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-foreground">{service.name}</h3>
@@ -60,14 +60,16 @@ const Cart = () => {
       </div>
 
       {/* Summary */}
-      <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border p-4 z-40">
+      <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border z-40">
+        <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-muted-foreground">Total ({cart.length} services)</span>
           <span className="text-lg font-bold text-foreground">₹{cartTotal}</span>
         </div>
-        <button onClick={() => navigate("/booking")} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon">
+        <button onClick={() => navigate("/booking")} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon md:text-lg md:py-4">
           Continue Booking
         </button>
+        </div>
       </div>
       <BottomNav />
     </div>

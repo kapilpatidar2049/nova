@@ -74,17 +74,19 @@ const ShopCart = () => {
         ))}
       </div>
 
-      <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border p-4 z-40 max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">Total</span>
-          <span className="text-lg font-bold text-foreground">₹{shopCartTotal}</span>
+      <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border z-40">
+        <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground">Total</span>
+            <span className="text-lg font-bold text-foreground">₹{shopCartTotal}</span>
+          </div>
+          <button
+            onClick={() => navigate("/shop/checkout")}
+            className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon md:text-lg md:py-4"
+          >
+            Delivery &amp; payment
+          </button>
         </div>
-        <button
-          onClick={() => navigate("/shop/checkout")}
-          className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon"
-        >
-          Delivery &amp; payment
-        </button>
       </div>
       <BottomNav />
     </div>
