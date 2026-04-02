@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle, Package, KeyRound } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle, Package, KeyRound, Loader2 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { customerApi } from "@/lib/api";
 import { formatDurationMs } from "@/lib/bookingTime";
@@ -95,6 +95,22 @@ const OrderDetail = () => {
             </p>
           ) : null}
         </div>
+
+        {!isProduct && order.status === "booked" && (
+          <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 flex gap-3 items-start">
+            <Loader2 className="w-5 h-5 text-amber-700 dark:text-amber-400 shrink-0 animate-spin" />
+            <div className="text-sm text-foreground">
+              <p className="font-semibold">
+                {order.beautician ? "Waiting for expert confirmation" : "Searching for a beautician"}
+              </p>
+              <p className="text-muted-foreground mt-1">
+                {order.beautician
+                  ? "A professional has been matched. They need to accept—this usually takes under a minute."
+                  : "We’re connecting you with an available expert nearby. This page updates automatically."}
+              </p>
+            </div>
+          </div>
+        )}
 
         {order.status !== "cancelled" && (
           <div className="bg-card rounded-xl p-5 shadow-card">

@@ -9,7 +9,7 @@ import {
   authApi,
 } from "@/lib/api";
 import { openRazorpayCheckout } from "@/lib/razorpay";
-import { getFCMToken, isFirebaseConfigured } from "@/lib/firebase";
+import { getFCMToken, isFirebaseConfigured, onFCMMessage } from "@/lib/firebase";
 import { toast } from "sonner";
 import { timeSlotToISOTime } from "@/lib/bookingTime";
 
@@ -257,6 +257,16 @@ function mapApiProductOrderToOrder(item: {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const APPOINTMENT_STATUS_FCM_TYPES = new Set([
+  "appointment_reassigned",
+  "appointment_unassigned",
+  "appointment_accepted",
+  "appointment_en_route",
+  "appointment_reached",
+  "appointment_started",
+  "appointment_completed",
+]);
 
 const WISHLIST_STORAGE_KEY = "customer_wishlist";
 const CART_STORAGE_KEY = "customer_cart";
@@ -518,6 +528,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (token) authApi.registerFcmToken(token).catch(() => {});
     });
   }, [state.isLoggedIn]);
+
+  useEffect(() => {
+    if (!state.isLoggedIn || !isFirebaseConfigured()) return;
+    const off = onFCMMessage((payload) => {
+      const t = String(payload.data?.type || "").toLowerCase();
+      if (APPOINTMENT_STATUS_FCM_TYPES.has(t)) {
+        void refreshOrders();
+        if (t === "appointment_completed") void refreshPendingRatings();
+      }
+    });
+    return off;
+  }, [state.isLoggedIn, refreshOrders, refreshPendingRatings]);
+
+  useEffect(() => {
+    if (!state.isLoggedIn || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      const msg = event.data as { source?: string; fcm?: { data?: Record<string, string> } } | null;
+      if (!msg || msg.source !== "fcm-sw" || !msg.fcm?.data) return;
+      const t = String(msg.fcm.data.type || "").toLowerCase();
+      if (APPOINTMENT_STATUS_FCM_TYPES.has(t)) {
+        void refreshOrders();
+        if (t === "appointment_completed") void refreshPendingRatings();
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, [state.isLoggedIn, refreshOrders, refreshPendingRatings]);
 
   const login = async (email: string, password: string) => {
     try {
