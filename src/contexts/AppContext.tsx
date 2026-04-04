@@ -109,7 +109,7 @@ function normalizePaymentModeForApi(mode: string | undefined): "online" | "cod" 
 
 function mapApiAppointmentToOrder(item: {
   _id: string;
-  service: { _id: string; name: string; basePrice: number; durationMinutes: number };
+  service?: { _id: string; name: string; basePrice: number; durationMinutes: number } | null;
   beautician?: {
     _id: string;
     name: string;
@@ -135,8 +135,22 @@ function mapApiAppointmentToOrder(item: {
     in_progress: "started",
     completed: "completed",
     cancelled: "cancelled",
+    rejected: "cancelled",
   };
   const status = statusMap[item.status] || "booked";
+
+  const svc = item.service;
+  const hasService = svc != null && typeof svc === "object" && "_id" in svc;
+  const serviceId = hasService ? String((svc as { _id: string })._id) : String(item._id);
+  const serviceName = hasService && "name" in svc ? String((svc as { name: string }).name) : "Service";
+  const basePrice =
+    hasService && "basePrice" in svc && typeof (svc as { basePrice?: number }).basePrice === "number"
+      ? (svc as { basePrice: number }).basePrice
+      : item.price;
+  const durationMinutes =
+    hasService && "durationMinutes" in svc && typeof (svc as { durationMinutes?: number }).durationMinutes === "number"
+      ? (svc as { durationMinutes: number }).durationMinutes
+      : 60;
   let timeSlot = "10:00 AM";
   let dateStr = new Date().toISOString().split("T")[0];
   try {
@@ -153,17 +167,18 @@ function mapApiAppointmentToOrder(item: {
     // keep defaults on any date error
   }
   return {
-    id: item._id,
+    id: String(item._id),
+    kind: "service",
     services: [
       {
         service: {
-          id: item.service._id,
-          name: item.service.name,
+          id: serviceId,
+          name: serviceName,
           category: "service",
-          price: item.service.basePrice,
+          price: basePrice,
           rating: 0,
           reviews: 0,
-          duration: `${item.service.durationMinutes} min`,
+          duration: `${durationMinutes} min`,
           image: DEFAULT_IMG,
           description: "",
           includes: [],
@@ -389,26 +404,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const refreshOrders = useCallback(async () => {
     if (!getUser()) return;
     setState((s) => ({ ...s, ordersLoading: true }));
+    let serviceRows: BookingOrder[] = [];
+    let productRows: BookingOrder[] = [];
     try {
-      const [apptRes, poRes] = await Promise.all([
-        customerApi.getAppointments(1, 100),
-        customerApi.getProductOrders(1, 100),
-      ]);
-      const serviceRows =
-        apptRes.success && apptRes.data?.items ? apptRes.data.items.map(mapApiAppointmentToOrder) : [];
-      const productRows =
-        poRes.success && poRes.data?.items ? poRes.data.items.map(mapApiProductOrderToOrder) : [];
-      const merged = [...serviceRows, ...productRows].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setState((s) => ({
-        ...s,
-        orders: merged,
-        ordersLoading: false,
-      }));
+      const apptRes = await customerApi.getAppointments(1, 100);
+      if (apptRes.success && apptRes.data?.items?.length) {
+        serviceRows = apptRes.data.items
+          .map((row) => {
+            try {
+              return mapApiAppointmentToOrder(row);
+            } catch {
+              return null;
+            }
+          })
+          .filter((x): x is BookingOrder => x != null);
+      }
     } catch {
-      setState((s) => ({ ...s, ordersLoading: false }));
+      // Appointments still empty; do not block product orders
     }
+    try {
+      const poRes = await customerApi.getProductOrders(1, 100);
+      if (poRes.success && poRes.data?.items?.length) {
+        productRows = poRes.data.items.map(mapApiProductOrderToOrder);
+      }
+    } catch {
+      // Shop history optional — service appointments already loaded above
+    }
+    const merged = [...serviceRows, ...productRows].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    setState((s) => ({
+      ...s,
+      orders: merged,
+      ordersLoading: false,
+    }));
   }, []);
 
   const refreshPendingRatings = useCallback(async () => {

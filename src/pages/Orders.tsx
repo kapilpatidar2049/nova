@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
@@ -28,8 +28,12 @@ const tabs = ["upcoming", "completed", "cancelled"] as const;
 
 const Orders = () => {
   const navigate = useNavigate();
-  const { orders } = useApp();
+  const { orders, refreshOrders, ordersLoading } = useApp();
   const [activeTab, setActiveTab] = useState<typeof tabs[number]>("upcoming");
+
+  useEffect(() => {
+    void refreshOrders();
+  }, [refreshOrders]);
 
   const filtered = orders.filter((o) => {
     if (activeTab === "upcoming") return !["completed", "cancelled"].includes(o.status);
@@ -60,7 +64,10 @@ const Orders = () => {
       </div>
 
       <div className="px-4 space-y-3">
-        {filtered.length === 0 && (
+        {ordersLoading && orders.length === 0 && (
+          <p className="text-center text-sm text-muted-foreground py-12">Loading your orders…</p>
+        )}
+        {!ordersLoading && filtered.length === 0 && (
           <div className="text-center py-16">
             <CalendarDays className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground">No {activeTab} orders</p>
