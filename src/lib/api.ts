@@ -196,6 +196,23 @@ export const customerApi = {
       "/customer/services",
       { params: { page: String(page), limit: String(limit), ...(search.trim() ? { search: search.trim() } : {}) } }
     ),
+  getServicesByCategory: (categoryId: string, page = 1, limit = 100, search = "") =>
+    request<{
+      category: ApiCategory;
+      items: Array<{
+        _id: string;
+        name: string;
+        category?: { _id: string; name: string; imageUrl?: string } | string | null;
+        description?: string;
+        includes?: string[];
+        imageUrl?: string;
+        basePrice: number;
+        durationMinutes: number;
+      }>;
+      meta: unknown;
+    }>(`/customer/categories/${categoryId}/services`, {
+      params: { page: String(page), limit: String(limit), ...(search.trim() ? { search: search.trim() } : {}) },
+    }),
   getServiceById: (id: string) =>
     request<{
       _id: string;

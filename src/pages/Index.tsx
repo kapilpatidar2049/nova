@@ -14,8 +14,10 @@ const Index = () => {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [banners, setBanners] = useState<ApiBanner[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [allServices, setAllServices] = useState<Service[]>([]);
+  const [categoryServices, setCategoryServices] = useState<Service[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const { isLoggedIn } = useApp();
   const navigate = useNavigate();
 
@@ -40,7 +42,7 @@ const Index = () => {
           setCategories(categoriesRes.data.items);
         }
         if (!cancelled && servicesRes.success && servicesRes.data?.items) {
-          setServices(servicesRes.data.items.map((s) => mapApiServiceToUi(s, serviceHair)));
+          setAllServices(servicesRes.data.items.map((s) => mapApiServiceToUi(s, serviceHair)));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -48,6 +50,33 @@ const Index = () => {
     })();
     return () => { cancelled = true; };
   }, [isLoggedIn, navigate]);
+
+  useEffect(() => {
+    if (!activeCategoryId) {
+      setCategoryServices(null);
+      return;
+    }
+    let cancelled = false;
+    setCategoryLoading(true);
+    setCategoryServices(null);
+    (async () => {
+      try {
+        const res = await customerApi.getServicesByCategory(activeCategoryId, 1, 100, "");
+        if (!cancelled && res.success && res.data?.items) {
+          setCategoryServices(res.data.items.map((s) => mapApiServiceToUi(s, serviceHair)));
+        } else if (!cancelled) {
+          setCategoryServices([]);
+        }
+      } catch {
+        if (!cancelled) setCategoryServices([]);
+      } finally {
+        if (!cancelled) setCategoryLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCategoryId]);
 
   if (!isLoggedIn) {
     return (
@@ -57,17 +86,15 @@ const Index = () => {
     );
   }
 
-  const activeCategoryName = activeCategoryId
-    ? categories.find((c) => c._id === activeCategoryId)?.name?.toLowerCase()
-    : null;
+  const listSource = activeCategoryId ? (categoryServices ?? []) : allServices;
 
-  const filtered = services.filter((s) => {
-    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = !activeCategoryName || s.category === activeCategoryName || s.category.includes(activeCategoryName);
-    return matchSearch && matchCat;
-  });
+  const filtered = listSource.filter((s) =>
+    s.name.toLowerCase().includes(search.toLowerCase()),
+  );
 
-  const topRated = [...services].sort((a, b) => b.rating - a.rating).slice(0, 4);
+  const topRated = [...allServices].sort((a, b) => b.rating - a.rating).slice(0, 4);
+
+  const servicesSectionLoading = loading || (Boolean(activeCategoryId) && categoryLoading);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -160,7 +187,7 @@ const Index = () => {
         </div>
 
         {/* Top Rated */}
-        {!search && !activeCategoryId && !loading && topRated.length > 0 && (
+        {!search && !activeCategoryId && !loading && !categoryLoading && topRated.length > 0 && (
           <div>
             <h2 className="text-lg font-display font-bold text-foreground mb-3">Top Rated</h2>
             <div className="grid grid-cols-2 gap-3">
@@ -176,7 +203,7 @@ const Index = () => {
           <h2 className="text-lg font-display font-bold text-foreground mb-3">
             {activeCategoryId ? categories.find((c) => c._id === activeCategoryId)?.name : "All Services"}
           </h2>
-          {loading ? (
+          {servicesSectionLoading ? (
             <p className="text-sm text-muted-foreground">Loading services...</p>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground">No services found</p>
