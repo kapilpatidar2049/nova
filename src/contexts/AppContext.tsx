@@ -865,7 +865,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const res = await customerApi.createProductOrder({
         items,
         address: address.trim(),
-        lat: 19.06,
+        lat: 19.06, // Note: AppContext placeShopOrder doesn't receive lat/lng yet, keeping fallback
         lng: 72.83,
         paymentMode: mode,
       });
@@ -930,8 +930,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         serviceId: firstService.id,
         scheduledAt,
         address: order.address,
-        lat: 19.06,
-        lng: 72.83,
+        lat: order.lat || 19.06,
+        lng: order.lng || 72.83,
         price: total,
         paymentMode: paymentMode as "online" | "cod" | "wallet",
         ...(order.beautician?.id ? { beauticianUserId: order.beautician.id } : {}),

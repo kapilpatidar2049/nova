@@ -47,6 +47,8 @@ export interface BookingOrder {
   date: string;
   timeSlot: string;
   address: string;
+  lat?: number;
+  lng?: number;
   paymentMode: string;
   status: "booked" | "assigned" | "on_the_way" | "reached" | "started" | "completed" | "cancelled";
   /** Shown when beautician has arrived and backend status is `reached` */

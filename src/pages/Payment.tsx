@@ -7,7 +7,7 @@ const Payment = () => {
   const location = useLocation();
   const { cart, cartTotal, walletBalance, createOrder } = useApp();
   const [paymentMode, setPaymentMode] = useState("online");
-  const bookingInfo = (location.state as { address?: string; date?: string; time?: string }) || {};
+  const bookingInfo = (location.state as { address?: string; lat?: number; lng?: number; date?: string; time?: string }) || {};
 
   const [paying, setPaying] = useState(false);
   const handlePay = async () => {
@@ -17,6 +17,8 @@ const Payment = () => {
       date: bookingInfo.date || new Date().toISOString().split("T")[0],
       timeSlot: bookingInfo.time || "10:00 AM",
       address: bookingInfo.address || "",
+      lat: bookingInfo.lat,
+      lng: bookingInfo.lng,
       paymentMode,
       status: "booked",
       total: cartTotal,

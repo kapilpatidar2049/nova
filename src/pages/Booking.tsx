@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Plus, CalendarDays, Clock, User, Check } from "lucide-react";
+import { ArrowLeft, MapPin, Plus, CalendarDays, Clock, User, Check, Navigation, Loader2 } from "lucide-react";
+import { Autocomplete, useLoadScript } from "@react-google-maps/api";
 import { useApp } from "@/contexts/AppContext";
 import { timeSlots } from "@/data/constants";
 
@@ -8,7 +9,27 @@ const Booking = () => {
   const navigate = useNavigate();
   const { cart, cartTotal } = useApp();
   const [step, setStep] = useState(1);
-  const [address, setAddress] = useState("");
+
+  // Address fields
+  const [addressLine, setAddressLine] = useState("");
+  const [building, setBuilding] = useState("");
+  const [floor, setFloor] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [city, setCity] = useState("");
+  const [lat, setLat] = useState<number | undefined>();
+  const [lng, setLng] = useState<number | undefined>();
+  const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [autocomplete, setAutocomplete] = useState<any>(null);
+
+  const { isLoaded: mapsLoaded } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries: ["places"]
+  });
+
+  const fullAddress = [building, floor ? `Floor ${floor}` : "", addressLine, landmark, city]
+    .filter((part) => part && part.trim() !== "")
+    .join(", ");
+
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState("");
 
@@ -36,14 +57,69 @@ const Booking = () => {
   });
 
   const canProceed = () => {
-    if (step === 1) return address.length > 0;
+    if (step === 1) return addressLine.trim().length > 0 && city.trim().length > 0;
     if (step === 2) return selectedDate && selectedTime;
     return true;
   };
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
-    else navigate("/payment", { state: { address, date: selectedDate, time: selectedTime } });
+    else navigate("/payment", { state: { address: fullAddress, lat, lng, date: selectedDate, time: selectedTime } });
+  };
+
+  const handlePlaceChanged = () => {
+    if (!autocomplete) return;
+    const place = autocomplete.getPlace();
+    const formatted = place.formatted_address || "";
+    setAddressLine(formatted);
+
+    const cityComp = (place.address_components || []).find((c: any) =>
+      c.types.includes("locality") || c.types.includes("administrative_area_level_2") || c.types.includes("administrative_area_level_1")
+    );
+    if (cityComp) setCity(cityComp.long_name);
+
+    if (place.geometry?.location) {
+      setLat(place.geometry.location.lat());
+      setLng(place.geometry.location.lng());
+    }
+  };
+
+  const fetchCurrentLocation = () => {
+    if (!("geolocation" in navigator)) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    setFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const latitude = pos.coords.latitude;
+        const longitude = pos.coords.longitude;
+        setLat(latitude);
+        setLng(longitude);
+        try {
+          const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+          if (key) {
+            const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${key}`);
+            const data = await res.json();
+            if (data.results && data.results.length > 0) {
+              const resObj = data.results[0];
+              setAddressLine(resObj.formatted_address || "");
+              const cityComp = resObj.address_components.find((c: any) => c.types.includes("locality"));
+              if (cityComp) setCity(cityComp.long_name);
+            }
+          }
+        } catch (e) {
+          console.error("Reverse geocode failed", e);
+        } finally {
+          setFetchingLocation(false);
+        }
+      },
+      (err) => {
+        alert("Could not fetch location. Please ensure location permissions are enabled.");
+        setFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   return (
@@ -79,17 +155,95 @@ const Booking = () => {
       <div className="px-4 md:px-0">
         {step === 1 && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-display font-bold text-foreground">Service Address</h2>
-            <div className="bg-card rounded-xl p-4 shadow-card border-2 border-border">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Enter full address for service"
-                  className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
-                />
+            <div className="flex items-center justify-between">
+              <h2 className="font-display font-bold text-foreground">Service Address</h2>
+              <button 
+                onClick={fetchCurrentLocation} 
+                disabled={fetchingLocation}
+                className="flex items-center gap-1.5 text-xs font-semibold text-primary/90 bg-primary/10 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+                type="button"
+              >
+                {fetchingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
+                {fetchingLocation ? "Getting Location..." : "Use Current Location"}
+              </button>
+            </div>
+            
+            <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
+              <div className="p-4 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" /> Full Address / Street
+                  </label>
+                  {mapsLoaded ? (
+                    <Autocomplete
+                      onLoad={(ac) => setAutocomplete(ac)}
+                      onPlaceChanged={handlePlaceChanged}
+                    >
+                      <input
+                        type="text"
+                        value={addressLine}
+                        onChange={(e) => setAddressLine(e.target.value)}
+                        placeholder="Enter your street or full address"
+                        autoComplete="street-address"
+                        className="w-full bg-transparent border-b border-border pb-2 outline-none text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+                      />
+                    </Autocomplete>
+                  ) : (
+                    <input
+                      type="text"
+                      value={addressLine}
+                      onChange={(e) => setAddressLine(e.target.value)}
+                      placeholder="Enter your street or full address"
+                      autoComplete="street-address"
+                      className="w-full bg-transparent border-b border-border pb-2 outline-none text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+                    />
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Building / Flat No.</label>
+                    <input
+                      type="text"
+                      value={building}
+                      onChange={(e) => setBuilding(e.target.value)}
+                      placeholder="e.g. A-42, Sunshine Apts"
+                      className="w-full bg-transparent border-b border-border pb-2 outline-none text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Floor (Optional)</label>
+                    <input
+                      type="text"
+                      value={floor}
+                      onChange={(e) => setFloor(e.target.value)}
+                      placeholder="e.g. 4th Floor"
+                      className="w-full bg-transparent border-b border-border pb-2 outline-none text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Landmark (Optional)</label>
+                  <input
+                    type="text"
+                    value={landmark}
+                    onChange={(e) => setLandmark(e.target.value)}
+                    placeholder="e.g. Near Metro Station"
+                    className="w-full bg-transparent border-b border-border pb-2 outline-none text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">City *</label>
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Enter your city"
+                    className="w-full bg-transparent border-b border-border pb-2 outline-none text-sm font-semibold text-foreground placeholder:text-muted-foreground/60 focus:border-primary transition-colors"
+                  />
+                </div>
               </div>
             </div>
           </div>
