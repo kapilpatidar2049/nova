@@ -5,10 +5,13 @@ import { useApp } from "@/contexts/AppContext";
 
 const ShopCheckout = () => {
   const navigate = useNavigate();
-  const { shopCart, shopCartTotal, walletBalance, placeShopOrder, isLoggedIn } = useApp();
+  const { shopCart, shopCartTotal, walletBalance, placeShopOrder, isLoggedIn, gstPercent } = useApp();
   const [address, setAddress] = useState("");
   const [paymentMode, setPaymentMode] = useState("online");
   const [paying, setPaying] = useState(false);
+
+  const gstAmount = Math.round((shopCartTotal * (gstPercent || 0)) / 100 * 100) / 100;
+  const finalTotal = shopCartTotal + gstAmount;
 
   if (!isLoggedIn) {
     navigate("/login");
@@ -75,9 +78,21 @@ const ShopCheckout = () => {
               <span className="font-semibold">₹{product.price * quantity}</span>
             </div>
           ))}
-          <div className="flex justify-between pt-3 mt-1 font-bold text-foreground">
-            <span>Total</span>
-            <span>₹{shopCartTotal}</span>
+          <div className="space-y-1 mt-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-semibold">₹{shopCartTotal}</span>
+            </div>
+            {gstAmount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">GST ({gstPercent}%)</span>
+                <span className="font-semibold">₹{gstAmount}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-2 border-t border-border mt-1 font-bold text-foreground">
+              <span>Total</span>
+              <span className="text-primary text-lg">₹{finalTotal}</span>
+            </div>
           </div>
         </div>
 
@@ -88,7 +103,7 @@ const ShopCheckout = () => {
               key={m.id}
               type="button"
               onClick={() => setPaymentMode(m.id)}
-              disabled={m.id === "wallet" && walletBalance < shopCartTotal}
+              disabled={m.id === "wallet" && walletBalance < finalTotal}
               className={`w-full p-4 rounded-xl border-2 flex items-center gap-4 text-left transition-all disabled:opacity-40 ${
                 paymentMode === m.id ? "border-primary bg-accent" : "border-border bg-card"
               }`}
@@ -98,7 +113,7 @@ const ShopCheckout = () => {
               </div>
               <div className="flex-1">
                 <span className="text-sm font-semibold text-foreground">{m.label}</span>
-                <p className="text-xs text-muted-foreground">{m.desc}</p>
+                <p className="text-xs text-muted-foreground">{m.id === "wallet" && walletBalance < finalTotal ? "Insufficient balance" : m.desc}</p>
               </div>
               {paymentMode === m.id && <Check className="w-5 h-5 text-primary" />}
             </button>
@@ -110,10 +125,10 @@ const ShopCheckout = () => {
         <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
           <button
             onClick={handlePay}
-            disabled={paying || address.trim().length < 5}
+            disabled={paying || address.trim().length < 5 || (paymentMode === "wallet" && walletBalance < finalTotal)}
             className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50 md:text-lg md:py-4"
           >
-            {paying ? "Placing order…" : paymentMode === "cod" ? `Place order ₹${shopCartTotal}` : `Pay ₹${shopCartTotal}`}
+            {paying ? "Placing order…" : paymentMode === "cod" ? `Place order ₹${finalTotal}` : `Pay ₹${finalTotal}`}
           </button>
         </div>
       </div>

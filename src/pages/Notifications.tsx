@@ -48,13 +48,14 @@ function scheduleCountdownLine(order: BookingOrder, now: number): { label: strin
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const { orders } = useApp();
+  const { orders, notifications, markNotificationRead, refreshNotifications } = useApp();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    refreshNotifications();
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [refreshNotifications]);
 
   const serviceOrders = orders
     .filter((o) => o.kind !== "product")
@@ -65,20 +66,29 @@ const Notifications = () => {
       return ta - tb;
     });
 
-  const productOrders = orders.filter((o) => o.kind === "product").slice(0, 10);
+  const productOrders = orders.filter((o) => o.kind === "product").slice(0, 5);
 
-  const alerts = [
+  const displayAlerts = [
+    ...notifications.map((n) => ({
+      key: `n-${n.id}`,
+      id: n.id,
+      type: "notification" as const,
+      title: n.title,
+      message: n.message,
+      timestamp: n.timestamp,
+      read: n.read,
+      nType: n.type
+    })),
     ...serviceOrders.map((order) => ({
       key: `s-${order.id}`,
+      id: order.id,
+      type: "order" as const,
       order,
-      kind: "service" as const,
+      title: alertTitle(order),
+      timestamp: order.createdAt,
+      read: true
     })),
-    ...productOrders.map((order) => ({
-      key: `p-${order.id}`,
-      order,
-      kind: "product" as const,
-    })),
-  ];
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -93,51 +103,70 @@ const Notifications = () => {
       </div>
 
       <div className="px-4 md:px-0 space-y-3">
-        {alerts.length === 0 ? (
+        {displayAlerts.length === 0 ? (
           <div className="text-center py-16">
             <Bell className="w-12 h-12 text-muted mx-auto mb-3" />
             <p className="text-muted-foreground text-sm">No alerts right now</p>
           </div>
         ) : (
-          alerts.map(({ key, order, kind }) => {
-            const cd = kind === "service" ? scheduleCountdownLine(order, now) : null;
-            return (
-              <button
-                key={key}
-                onClick={() => navigate(`/order/${order.id}`)}
-                className="w-full bg-card rounded-xl p-4 shadow-card text-left border border-border/60 hover:border-primary/30 transition-colors"
-              >
-                <p className="text-sm font-semibold text-foreground">{alertTitle(order)}</p>
-                {kind === "product" ? (
+          displayAlerts.map((alert) => {
+            if (alert.type === "order" && alert.order) {
+              const order = alert.order;
+              const cd = scheduleCountdownLine(order, now);
+              return (
+                <button
+                  key={alert.key}
+                  onClick={() => navigate(`/order/${order.id}`)}
+                  className="w-full bg-card rounded-xl p-4 shadow-card text-left border border-border/60 hover:border-primary/30 transition-colors"
+                >
+                  <p className="text-sm font-semibold text-foreground">{alert.title}</p>
                   <p className="text-xs text-muted-foreground mt-1 capitalize">
-                    {order.vendorName ? `${order.vendorName} · ` : ""}
-                    {order.status.replaceAll("_", " ")}
+                    Status: {order.status.replace(/_/g, " ")}
                   </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-1 capitalize">
-                    Status: {order.status.replaceAll("_", " ")}
-                  </p>
-                )}
-                {cd && (
-                  <div
-                    className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 ${
-                      cd.urgent ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-foreground"
-                    }`}
-                  >
-                    <Timer className="w-4 h-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-medium uppercase tracking-wide opacity-90">{cd.label}</p>
-                      {cd.sub && (
-                        <p className="text-sm font-bold tabular-nums">{cd.sub}</p>
-                      )}
+                  {cd && (
+                    <div
+                      className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 ${
+                        cd.urgent ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-foreground"
+                      }`}
+                    >
+                      <Timer className="w-4 h-4 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium uppercase tracking-wide opacity-90">{cd.label}</p>
+                        {cd.sub && <p className="text-sm font-bold tabular-nums">{cd.sub}</p>}
+                      </div>
                     </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    {order.date} · {order.timeSlot}
+                  </p>
+                </button>
+              );
+            }
+
+            if (alert.type === "notification") {
+              return (
+                <button
+                  key={alert.key}
+                  onClick={() => {
+                    if (!alert.read) markNotificationRead(alert.id);
+                  }}
+                  className={`w-full bg-card rounded-xl p-4 shadow-card text-left border transition-colors ${
+                    alert.read ? "border-border/40 opacity-75" : "border-primary/30 ring-1 ring-primary/10"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">{alert.title}</p>
+                    {!alert.read && <span className="w-2 h-2 bg-primary rounded-full mt-1.5" />}
                   </div>
-                )}
-                <p className="text-[11px] text-muted-foreground mt-2">
-                  {order.date} · {order.timeSlot}
-                </p>
-              </button>
-            );
+                  <p className="text-xs text-muted-foreground mt-1">{alert.message}</p>
+                  <p className="text-[10px] text-muted-foreground mt-3">
+                    {new Date(alert.timestamp).toLocaleString()}
+                  </p>
+                </button>
+              );
+            }
+
+            return null;
           })
         )}
       </div>

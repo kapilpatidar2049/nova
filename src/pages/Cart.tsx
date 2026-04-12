@@ -5,10 +5,13 @@ import BottomNav from "@/components/BottomNav";
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { cart, updateQuantity, removeFromCart, cartTotal } = useApp();
+  const { cart, updateQuantity, removeFromCart, cartTotal, gstPercent } = useApp();
+  const gstAmount = Math.round((cartTotal * (gstPercent || 0)) / 100 * 100) / 100;
+  const finalTotal = cartTotal + gstAmount;
 
   if (cart.length === 0) {
     return (
+// ... (keep the empty cart block the same)
       <div className="min-h-screen bg-background flex flex-col items-center justify-center pb-20">
         <ShoppingBag className="w-16 h-16 text-muted-foreground/30 mb-4" />
         <h2 className="text-lg font-display font-bold text-foreground">Your cart is empty</h2>
@@ -62,9 +65,21 @@ const Cart = () => {
       {/* Summary */}
       <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border z-40">
         <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">Total ({cart.length} services)</span>
-          <span className="text-lg font-bold text-foreground">₹{cartTotal}</span>
+        <div className="space-y-1 mb-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Subtotal</span>
+            <span className="text-sm font-semibold text-foreground">₹{cartTotal}</span>
+          </div>
+          {gstAmount > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">GST ({gstPercent}%)</span>
+              <span className="text-sm font-semibold text-foreground">₹{gstAmount}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between pt-1 border-t border-border mt-1">
+            <span className="font-bold text-foreground">Total</span>
+            <span className="text-lg font-bold text-primary">₹{finalTotal}</span>
+          </div>
         </div>
         <button onClick={() => navigate("/booking")} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon md:text-lg md:py-4">
           Continue Booking

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle, Package, KeyRound, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, CreditCard, Phone, Star, Check, Circle, Package, KeyRound, Loader2, FileText } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { customerApi } from "@/lib/api";
 import { formatDurationMs } from "@/lib/bookingTime";
@@ -198,11 +198,27 @@ const OrderDetail = () => {
               {order.date} • {order.timeSlot}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <CreditCard className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-sm text-foreground">
-              {order.paymentMode} • ₹{order.total}
-            </span>
+          <div className="flex items-start gap-3">
+            <CreditCard className="w-4 h-4 text-primary shrink-0 mt-1" />
+            <div className="flex-1 space-y-1">
+              <span className="text-sm text-foreground block">{order.paymentMode}</span>
+              <div className="flex flex-col text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>₹{order.subTotal || order.total}</span>
+                </div>
+                {order.gstAmount && order.gstAmount > 0 ? (
+                  <div className="flex justify-between">
+                    <span>GST</span>
+                    <span>₹{order.gstAmount}</span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between font-bold text-foreground border-t border-border mt-1 pt-1">
+                  <span>Total Amount</span>
+                  <span>₹{order.total}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -259,6 +275,15 @@ const OrderDetail = () => {
               )}
             </div>
           </div>
+        )}
+
+        {(order.status === "completed" || (isProduct && ["confirmed", "shipped", "delivered"].includes(order.status))) && (
+          <button
+            onClick={() => navigate(`/profile/invoices/${order.id}`)}
+            className="w-full h-14 rounded-2xl bg-primary/10 text-primary border-2 border-primary/20 flex items-center justify-center gap-2 font-bold shadow-sm transition-active active:scale-95"
+          >
+            <FileText className="w-5 h-5" /> View Invoice
+          </button>
         )}
 
         {!["completed", "cancelled", "started"].includes(order.status) && (

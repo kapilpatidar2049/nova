@@ -47,6 +47,7 @@ export interface BookingOrder {
   date: string;
   timeSlot: string;
   address: string;
+  addressDetails?: any;
   lat?: number;
   lng?: number;
   paymentMode: string;
@@ -55,8 +56,19 @@ export interface BookingOrder {
   serviceStartOtp?: string | null;
   beautician?: Beautician;
   total: number;
+  subTotal?: number;
+  gstAmount?: number;
   createdAt: string;
   /** Product order line items when kind === "product" */
   productLines?: { name: string; quantity: number; lineTotal: number }[];
   vendorName?: string;
+}
+
+export interface Notification {
+  id: string;
+  type: 'new_job' | 'delay_alert' | 'payment' | 'general' | 'appointment_status';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
 }

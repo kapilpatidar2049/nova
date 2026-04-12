@@ -93,23 +93,11 @@ async function refreshToken(): Promise<boolean> {
 export const authApi = {
   registerFcmToken: (token: string) =>
     request("/auth/fcm-token", { method: "POST", body: JSON.stringify({ token }) }),
-  login: (email: string, password: string) =>
-    request<{ user: { id: string; name: string; email: string; role: string; phone?: string }; tokens: { accessToken: string; refreshToken: string } }>(
-      "/auth/login",
-      { method: "POST", body: JSON.stringify({ email, password }) }
-    ),
   sendOtp: (phone: string, fcmToken?: string | null) =>
     request<{ sent: boolean }>("/auth/send-otp", {
       method: "POST",
       body: JSON.stringify({ phone, role: "customer", ...(fcmToken ? { fcmToken } : {}) }),
     }),
-  verifyOtp: (phone: string, otp: string) =>
-    request<{
-      user: { id: string; name: string; email: string; role: string; phone?: string };
-      tokens: { accessToken: string; refreshToken: string };
-      needsSignup?: boolean;
-      phone?: string;
-    }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ phone, otp, role: "customer" }) }),
   register: (body: {
     name: string;
     email: string;
@@ -118,10 +106,22 @@ export const authApi = {
     cityId?: string;
     referralCode?: string;
   }) =>
-    request<{ user: { id: string; name: string; email: string; role: string }; tokens: { accessToken: string; refreshToken: string } }>(
+    request<{ user: { id: string; name: string; email: string; phone: string; role: string }; tokens: { accessToken: string; refreshToken: string } }>(
       "/auth/register",
       { method: "POST", body: JSON.stringify(body) }
     ),
+  login: (email, password) =>
+    request<{ user: { id: string; name: string; email: string; phone: string; role: string }; tokens: { accessToken: string; refreshToken: string } }>(
+      "/auth/login",
+      { method: "POST", body: JSON.stringify({ email, password }) }
+    ),
+  verifyOtp: (phone, otp) =>
+    request<{
+      user?: { id: string; name: string; email: string; phone: string; role: string };
+      tokens?: { accessToken: string; refreshToken: string };
+      needsSignup?: boolean;
+      phone?: string;
+    }>("/auth/verify-otp", { method: "POST", body: JSON.stringify({ phone, otp, role: "customer" }) }),
   profile: () =>
     request<{
       name: string;
@@ -147,12 +147,14 @@ export const authApi = {
     }>("/auth/profile-image", { method: "POST", body: formData });
   },
   updateProfile: (body: { name?: string; phone?: string }) =>
-    request<{ name: string; email: string; phone?: string; id?: string; _id?: string }>("/auth/update-profile", {
+    request<{ name: string; email: string; phone?: string; id?: string; _id?: string; profileImageUrl?: string | null }>("/auth/update-profile", {
       method: "PUT",
       body: JSON.stringify(body),
     }),
   changePassword: (body: { currentPassword: string; newPassword: string }) =>
     request("/auth/change-password", { method: "POST", body: JSON.stringify(body) }),
+  resetPassword: (body: { phone: string; otp: string; newPassword: string }) =>
+    request("/auth/reset-password", { method: "POST", body: JSON.stringify(body) }),
   deleteAccount: (body: { password: string }) =>
     request("/auth/delete-account", { method: "POST", body: JSON.stringify(body) }),
 };
@@ -294,7 +296,33 @@ export const customerApi = {
   verifyPayment: (body: { paymentId: string; providerPaymentId: string; providerSignature: string }) =>
     request("/customer/payment/verify", { method: "POST", body: JSON.stringify(body) }),
   getInvoices: (page = 1, limit = 20) =>
-    request<{ items: unknown[]; meta: unknown }>("/customer/invoices", { params: { page: String(page), limit: String(limit) } }),
+    request<{
+      items: Array<{
+        _id: string;
+        invoiceNumber: string;
+        type: "service" | "product";
+        title: string;
+        date: string;
+        amount: number;
+        paymentMode: string;
+        status: string;
+        vendorName: string;
+      }>;
+      meta: unknown;
+    }>("/customer/invoices", { params: { page: String(page), limit: String(limit) } }),
+  getInvoiceById: (id: string) =>
+    request<{
+      _id: string;
+      invoiceNumber: string;
+      type: "service" | "product";
+      date: string;
+      customer: { name: string; email?: string; phone?: string; address: string };
+      vendor: { name: string; address?: string; phone?: string };
+      items: Array<{ name: string; quantity: number; price: number; total: number }>;
+      total: number;
+      paymentMode: string;
+      status: string;
+    }>(`/customer/invoices/${id}`),
   getBeauticianSummary: (beauticianUserId: string) =>
     request<{
       id: string;
@@ -383,6 +411,10 @@ export const customerApi = {
       beauticianRewardAmount: number;
       shareMessage: string;
     }>("/customer/referral"),
+  getSettings: () =>
+    request<{
+      gstPercent: number;
+    }>("/customer/settings"),
 };
 
 export function mapApiServiceToUi(
@@ -420,3 +452,19 @@ export function mapApiServiceToUi(
     includes: item.includes && Array.isArray(item.includes) ? item.includes : [],
   };
 }
+
+export const notificationApi = {
+  getNotifications: () =>
+    request<
+      {
+        _id: string;
+        type: "new_job" | "delay_alert" | "payment" | "general" | "appointment_status";
+        title: string;
+        message: string;
+        createdAt: string;
+        read: boolean;
+      }[]
+    >("/notifications"),
+  markRead: (id: string) => request<any>(`/notifications/${id}/read`, { method: "PATCH" }),
+  markAllRead: () => request<any>("/notifications/read-all", { method: "PATCH" }),
+};

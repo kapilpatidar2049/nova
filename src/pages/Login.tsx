@@ -84,8 +84,9 @@ const Login = () => {
     const result = await loginWithOtp(phoneToUse.length === 10 ? phoneToUse : phone, otp);
     setLoading(false);
     if (result.ok) {
-      if ((result as { needsSignup?: boolean; phone?: string }).needsSignup && (result as { phone?: string }).phone) {
-        setSignupPhone((result as { phone: string }).phone);
+      const otpResult = result as { needsSignup?: boolean; phone?: string; ok: boolean };
+      if (otpResult.needsSignup && otpResult.phone) {
+        setSignupPhone(otpResult.phone);
         setOtpVerifiedForSignup(true);
         setMode("signup");
         setOtpSent(false);
@@ -273,6 +274,15 @@ const Login = () => {
                 placeholder="Password"
                 className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
               />
+            </div>
+            <div className="flex justify-end px-1">
+              <button
+                type="button"
+                onClick={() => navigate("/forgot-password")}
+                className="text-xs text-primary font-medium hover:underline"
+              >
+                Forgot Password?
+              </button>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <button

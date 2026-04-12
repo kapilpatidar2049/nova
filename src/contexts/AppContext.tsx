@@ -7,6 +7,7 @@ import {
   getUser,
   customerApi,
   authApi,
+  notificationApi,
 } from "@/lib/api";
 import { openRazorpayCheckout } from "@/lib/razorpay";
 import { getFCMToken, isFirebaseConfigured, onFCMMessage } from "@/lib/firebase";
@@ -37,6 +38,9 @@ interface AppState {
   ordersLoading: boolean;
   /** First completed appointment that still needs customer→beautician rating (mandatory before new bookings). */
   pendingRatingAppointmentId: string | null;
+  gstPercent: number;
+  notifications: import("@/types").Notification[];
+  unreadNotificationsCount: number;
 }
 
 interface AppContextType extends AppState {
@@ -79,9 +83,12 @@ interface AppContextType extends AppState {
   refreshProfile: () => Promise<void>;
   updateProfile: (payload: { name?: string; phone?: string }) => Promise<{ ok: boolean; error?: string }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ ok: boolean; error?: string }>;
+  resetPassword: (body: { phone: string; otp: string; newPassword: string }) => Promise<{ ok: boolean; error?: string }>;
   deleteAccount: (password: string) => Promise<{ ok: boolean; error?: string }>;
   rechargeWallet: (amount: number) => Promise<{ ok: boolean; error?: string }>;
   refreshPendingRatings: () => Promise<void>;
+  refreshNotifications: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
 }
 
 function mapPaymentModeToDisplay(mode: string | undefined): string {
@@ -123,6 +130,8 @@ function mapApiAppointmentToOrder(item: {
   address: string;
   status: string;
   price: number;
+  subTotal?: number;
+  gstAmount?: number;
   paymentMode?: string;
   createdAt?: string;
   serviceStartOtp?: string | null;
@@ -205,6 +214,8 @@ function mapApiAppointmentToOrder(item: {
         }
       : undefined,
     total: item.price,
+    subTotal: item.subTotal,
+    gstAmount: item.gstAmount,
     createdAt: item.createdAt || new Date().toISOString(),
     serviceStartOtp:
       status === "reached" && "serviceStartOtp" in item && item.serviceStartOtp
@@ -230,6 +241,8 @@ function mapApiProductOrderToOrder(item: {
   items: Array<{ name: string; quantity: number; lineTotal: number; unitPrice: number }>;
   address: string;
   totalAmount: number;
+  subTotal?: number;
+  gstAmount?: number;
   status: string;
   paymentMode?: string;
   createdAt?: string;
@@ -261,6 +274,8 @@ function mapApiProductOrderToOrder(item: {
     paymentMode: mapPaymentModeToDisplay(item.paymentMode),
     status: mapProductOrderStatus(item.status),
     total: item.totalAmount,
+    subTotal: item.subTotal,
+    gstAmount: item.gstAmount,
     createdAt: item.createdAt || new Date().toISOString(),
     productLines: item.items?.map((l) => ({
       name: l.name,
@@ -399,6 +414,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     servicesLoading: false,
     ordersLoading: false,
     pendingRatingAppointmentId: null,
+    gstPercent: 0,
+    notifications: [],
+    unreadNotificationsCount: 0,
   });
 
   const refreshOrders = useCallback(async () => {
@@ -509,6 +527,43 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const refreshNotifications = useCallback(async () => {
+    if (!getUser()) return;
+    try {
+      const res = await notificationApi.getNotifications();
+      if (res.success && res.data) {
+        const notifications = res.data.map(n => ({
+          id: n._id,
+          type: n.type as any,
+          title: n.title,
+          message: n.message,
+          timestamp: n.createdAt,
+          read: n.read
+        }));
+        setState(s => ({
+          ...s,
+          notifications,
+          unreadNotificationsCount: notifications.filter(x => !x.read).length
+        }));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const markNotificationRead = useCallback(async (id: string) => {
+    try {
+      await notificationApi.markRead(id);
+      setState(s => ({
+        ...s,
+        notifications: s.notifications.map(n => n.id === id ? { ...n, read: true } : n),
+        unreadNotificationsCount: Math.max(0, s.unreadNotificationsCount - 1)
+      }));
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     try {
       const res = await authApi.changePassword({ currentPassword, newPassword });
@@ -516,6 +571,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return { ok: false as const, error: (res as { message?: string }).message || "Could not update password" };
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : "Could not update password" };
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (body: { phone: string; otp: string; newPassword: string }) => {
+    try {
+      const res = await authApi.resetPassword(body);
+      if (res.success) return { ok: true as const };
+      return { ok: false as const, error: (res as { message?: string }).message || "Could not reset password" };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : "Could not reset password" };
     }
   }, []);
 
@@ -584,6 +649,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     navigator.serviceWorker.addEventListener("message", handler);
     return () => navigator.serviceWorker.removeEventListener("message", handler);
   }, [state.isLoggedIn, refreshOrders, refreshPendingRatings]);
+
+  useEffect(() => {
+    if (state.isLoggedIn) {
+      customerApi.getSettings().then((res) => {
+        if (res.success && res.data) {
+          setState((s) => ({ ...s, gstPercent: res.data.gstPercent }));
+        }
+      });
+    }
+  }, [state.isLoggedIn]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -1019,9 +1094,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         refreshProfile,
         updateProfile,
         changePassword,
+        resetPassword,
         deleteAccount,
         rechargeWallet,
         refreshPendingRatings,
+        refreshNotifications,
+        markNotificationRead,
       }}
     >
       {children}

@@ -66,6 +66,15 @@ const ChangePassword = () => {
               className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
               autoComplete="current-password"
             />
+            <div className="flex justify-end mt-1">
+              <button
+                type="button"
+                onClick={() => navigate("/forgot-password")}
+                className="text-xs text-primary font-medium hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">New password</label>

@@ -5,9 +5,19 @@ import { useApp } from "@/contexts/AppContext";
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cart, cartTotal, walletBalance, createOrder } = useApp();
+  const { cart, cartTotal, walletBalance, createOrder, gstPercent } = useApp();
   const [paymentMode, setPaymentMode] = useState("online");
-  const bookingInfo = (location.state as { address?: string; lat?: number; lng?: number; date?: string; time?: string }) || {};
+  const bookingInfo = (location.state as { 
+    address?: string; 
+    addressDetails?: any;
+    lat?: number; 
+    lng?: number; 
+    date?: string; 
+    time?: string 
+  }) || {};
+
+  const gstAmount = Math.round((cartTotal * (gstPercent || 0)) / 100 * 100) / 100;
+  const finalTotal = cartTotal + gstAmount;
 
   const [paying, setPaying] = useState(false);
   const handlePay = async () => {
@@ -17,11 +27,12 @@ const Payment = () => {
       date: bookingInfo.date || new Date().toISOString().split("T")[0],
       timeSlot: bookingInfo.time || "10:00 AM",
       address: bookingInfo.address || "",
+      addressDetails: bookingInfo.addressDetails,
       lat: bookingInfo.lat,
       lng: bookingInfo.lng,
       paymentMode,
       status: "booked",
-      total: cartTotal,
+      total: cartTotal, // We pass base price, backend calculates GST and updates order total
     }, { processOnlinePayment: true });
     setPaying(false);
     if (orderId) {
@@ -59,8 +70,18 @@ const Payment = () => {
             </div>
           ))}
           <div className="flex items-center justify-between pt-3 mt-1">
-            <span className="font-semibold text-foreground">Total</span>
-            <span className="text-lg font-bold text-foreground">₹{cartTotal}</span>
+            <span className="text-sm text-muted-foreground">Subtotal</span>
+            <span className="text-sm font-semibold text-foreground">₹{cartTotal}</span>
+          </div>
+          {gstAmount > 0 && (
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-sm text-muted-foreground">GST ({gstPercent}%)</span>
+              <span className="text-sm font-semibold text-foreground">₹{gstAmount}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between pt-2 mt-2 border-t border-border">
+            <span className="font-bold text-foreground">Total</span>
+            <span className="text-lg font-bold text-primary">₹{finalTotal}</span>
           </div>
         </div>
 
@@ -72,7 +93,7 @@ const Payment = () => {
             <button
               key={m.id}
               onClick={() => setPaymentMode(m.id)}
-              disabled={m.id === "wallet" && walletBalance < cartTotal}
+              disabled={m.id === "wallet" && walletBalance < finalTotal}
               className={`w-full p-4 rounded-xl border-2 flex items-center gap-4 text-left transition-all disabled:opacity-40 ${
                 paymentMode === m.id ? "border-primary bg-accent" : "border-border bg-card"
               }`}
@@ -82,7 +103,7 @@ const Payment = () => {
               </div>
               <div className="flex-1">
                 <span className="text-sm font-semibold text-foreground">{m.label}</span>
-                <p className="text-xs text-muted-foreground">{m.desc}</p>
+                <p className="text-xs text-muted-foreground">{m.id === "wallet" && walletBalance < finalTotal ? "Insufficient balance" : m.desc}</p>
               </div>
               {paymentMode === m.id && <Check className="w-5 h-5 text-primary" />}
             </button>
@@ -93,8 +114,8 @@ const Payment = () => {
 
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
         <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
-          <button onClick={handlePay} disabled={paying} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50 md:text-lg md:py-4">
-            {paying ? "Booking..." : paymentMode === "cod" ? `Confirm COD ₹${cartTotal}` : `Pay ₹${cartTotal}`}
+          <button onClick={handlePay} disabled={paying || (paymentMode === "wallet" && walletBalance < finalTotal)} className="w-full gradient-primary text-primary-foreground py-3.5 rounded-xl font-semibold shadow-salon disabled:opacity-50 md:text-lg md:py-4">
+            {paying ? "Booking..." : paymentMode === "cod" ? `Confirm COD ₹${finalTotal}` : `Pay ₹${finalTotal}`}
           </button>
         </div>
       </div>

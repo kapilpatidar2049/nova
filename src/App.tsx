@@ -9,6 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Splash from "./pages/Splash";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import SearchPage from "./pages/SearchPage";
 import ServiceDetail from "./pages/ServiceDetail";
 import Cart from "./pages/Cart";
@@ -33,6 +34,8 @@ import BeauticianProfile from "./pages/BeauticianProfile";
 import Shop from "./pages/Shop";
 import ShopCart from "./pages/ShopCart";
 import ShopCheckout from "./pages/ShopCheckout";
+import Invoices from "./pages/Invoices";
+import InvoiceDetail from "./pages/InvoiceDetail";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +77,7 @@ const App = () => (
               <Route path="/beautician/:id" element={<BeauticianProfile />} />
               <Route path="/home" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/service/:id" element={<ServiceDetail />} />
               <Route path="/shop" element={<Shop />} />
@@ -87,6 +91,8 @@ const App = () => (
               <Route path="/order/:id" element={<OrderDetail />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/edit" element={<EditProfile />} />
+              <Route path="/profile/invoices" element={<Invoices />} />
+              <Route path="/profile/invoices/:id" element={<InvoiceDetail />} />
               <Route path="/profile/change-password" element={<ChangePassword />} />
               <Route path="/profile/delete-account" element={<DeleteAccount />} />
               <Route path="/wallet" element={<WalletPage />} />

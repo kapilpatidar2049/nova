@@ -12,6 +12,7 @@ import {
   KeyRound,
   UserX,
   Gift,
+  FileText,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import BottomNav from "@/components/BottomNav";
@@ -22,6 +23,7 @@ const Profile = () => {
 
   const menuItems = [
     { icon: UserRound, label: "Edit profile", action: () => navigate("/profile/edit") },
+    { icon: FileText, label: "My Invoices", action: () => navigate("/profile/invoices") },
     { icon: Gift, label: "Refer & earn", action: () => navigate("/profile/referral") },
     { icon: Heart, label: "Wishlist", value: `${wishlist.length} items`, action: () => navigate("/wishlist") },
     { icon: MapPin, label: "My Addresses", action: () => navigate("/addresses") },

@@ -36,7 +36,7 @@ const Booking = () => {
   const dates = Array.from({ length: 7 }, (_, i) => {
     try {
       const d = new Date();
-      d.setDate(d.getDate() + i + 1);
+      d.setDate(d.getDate() + i);
       if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
       return {
         date: d.toISOString().split("T")[0],
@@ -44,7 +44,7 @@ const Booking = () => {
         num: d.getDate(),
       };
     } catch {
-      const t = Date.now() + (i + 1) * 86400000;
+      const t = Date.now() + i * 86400000;
       const y = new Date(t).getUTCFullYear();
       const m = new Date(t).getUTCMonth() + 1;
       const dayNum = new Date(t).getUTCDate();
@@ -56,6 +56,25 @@ const Booking = () => {
     }
   });
 
+  const isToday = selectedDate === new Date().toISOString().split("T")[0];
+
+  const filteredTimeSlots = isToday 
+    ? timeSlots.filter(slot => {
+        const [time, modifier] = slot.split(" ");
+        let [hours, minutes] = time.split(":").map(Number);
+        if (modifier === "PM" && hours < 12) hours += 12;
+        if (modifier === "AM" && hours === 12) hours = 0;
+        
+        const slotDate = new Date();
+        slotDate.setHours(hours, minutes, 0, 0);
+        
+        const now = new Date();
+        const minTime = new Date(now.getTime() + 30 * 60000);
+        
+        return slotDate > minTime;
+      })
+    : timeSlots;
+
   const canProceed = () => {
     if (step === 1) return addressLine.trim().length > 0 && city.trim().length > 0;
     if (step === 2) return selectedDate && selectedTime;
@@ -64,7 +83,21 @@ const Booking = () => {
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
-    else navigate("/payment", { state: { address: fullAddress, lat, lng, date: selectedDate, time: selectedTime } });
+    else navigate("/payment", { 
+      state: { 
+        address: fullAddress, 
+        addressDetails: {
+          building,
+          floor,
+          landmark,
+          originalAddress: addressLine
+        },
+        lat, 
+        lng, 
+        date: selectedDate, 
+        time: selectedTime 
+      } 
+    });
   };
 
   const handlePlaceChanged = () => {
@@ -271,17 +304,23 @@ const Booking = () => {
             <div>
               <h2 className="font-display font-bold text-foreground flex items-center gap-2"><Clock className="w-5 h-5 text-primary" /> Select Time</h2>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mt-3">
-                {timeSlots.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setSelectedTime(t)}
-                    className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
-                      selectedTime === t ? "gradient-primary text-primary-foreground shadow-salon" : "bg-card shadow-card text-foreground"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
+                {filteredTimeSlots.length > 0 ? (
+                  filteredTimeSlots.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setSelectedTime(t)}
+                      className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
+                        selectedTime === t ? "gradient-primary text-primary-foreground shadow-salon" : "bg-card shadow-card text-foreground"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))
+                ) : (
+                  <div className="col-span-full py-4 text-center">
+                    <p className="text-sm text-muted-foreground">No slots available for today. Please pick another date.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

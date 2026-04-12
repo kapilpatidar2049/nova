@@ -5,7 +5,9 @@ import BottomNav from "@/components/BottomNav";
 
 const ShopCart = () => {
   const navigate = useNavigate();
-  const { shopCart, updateShopQuantity, removeFromShopCart, shopCartTotal, isLoggedIn } = useApp();
+  const { shopCart, updateShopQuantity, removeFromShopCart, shopCartTotal, isLoggedIn, gstPercent } = useApp();
+  const gstAmount = Math.round((shopCartTotal * (gstPercent || 0)) / 100 * 100) / 100;
+  const finalTotal = shopCartTotal + gstAmount;
 
   if (!isLoggedIn) {
     return (
@@ -76,9 +78,21 @@ const ShopCart = () => {
 
       <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border z-40">
         <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Total</span>
-            <span className="text-lg font-bold text-foreground">₹{shopCartTotal}</span>
+          <div className="space-y-1 mb-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Subtotal</span>
+              <span className="text-sm font-semibold text-foreground">₹{shopCartTotal}</span>
+            </div>
+            {gstAmount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">GST ({gstPercent}%)</span>
+                <span className="text-sm font-semibold text-foreground">₹{gstAmount}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1 border-t border-border mt-1">
+              <span className="font-bold text-foreground">Total</span>
+              <span className="text-lg font-bold text-primary">₹{finalTotal}</span>
+            </div>
           </div>
           <button
             onClick={() => navigate("/shop/checkout")}
